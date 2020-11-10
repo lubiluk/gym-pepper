@@ -1,0 +1,187 @@
+# Some bits are based on:
+# https://github.com/softbankrobotics-research/qi_gym/blob/master/envs/throwing_env.py
+
+from pathlib import Path
+
+import gym
+import numpy as np
+import pybullet as p
+from gym import error, spaces, utils
+from gym.utils import seeding
+from qibullet import PepperVirtual, SimulationManager
+
+TIME_STEP = 0.1
+DISTANCE_THRESHOLD = 0.04
+WORKSPACE_RADIUS = 2.0
+MAX_SPEED = 0.5
+CONTROLLABLE_JOINTS = [
+    "HeadYaw",
+    "HeadPitch",
+    "LShoulderPitch",
+    "LShoulderRoll",
+    "LElbowYaw",
+    "LElbowRoll",
+    "LWristYaw",
+    "LHand",
+    "HipRoll",
+    "HipPitch",
+    "KneePitch",
+]
+
+
+class PepperPushEnv(gym.GoalEnv):
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self, gui=False):
+        self._setup_scene(gui)
+
+        self._goal_xy = self._sample_goal()
+        obs = self._get_observation()
+
+        self.action_space = spaces.Box(-2.0857, 2.0857, shape=(11,), dtype='float32')
+        self.observation_space = spaces.Dict(dict(
+            desired_goal=spaces.Box(-np.inf, np.inf,
+                                    shape=obs['achieved_goal'].shape, dtype='float32'),
+            achieved_goal=spaces.Box(-np.inf, np.inf,
+                                     shape=obs['achieved_goal'].shape, dtype='float32'),
+            observation=spaces.Box(-np.inf, np.inf,
+                                   shape=obs['observation'].shape, dtype='float32'),
+        ))
+
+        p.setRealTimeSimulation(0)
+
+    def reset(self):
+        self._reset_scene()
+        self._goal_xy = self._sample_goal()
+
+        return self._get_observation()
+
+    def step(self, action):
+        action = list(action)
+        assert len(action) == len(self.action_space.high.tolist())
+
+        self._robot.setAngles(CONTROLLABLE_JOINTS, action, [MAX_SPEED] * 11)
+
+        p.stepSimulation()
+
+        obs = self._get_observation()
+
+        is_success = self._is_success(obs['achieved_goal'], self._goal_xy)
+        info = {
+            'is_success': is_success,
+        }
+        reward = self.compute_reward(
+            obs['achieved_goal'], self._goal_xy, info)
+        done = is_success or self._is_table_displaced()
+
+        return (obs, reward, done, info)
+
+    def render(self, mode='human'):
+        pass
+
+    def close(self):
+        self._simulation_manager.stopSimulation(self._client)
+
+    def seed(self, seed=None):
+        np.random.seed(seed or 0)
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+        if np.allclose(desired_goal, achieved_goal, atol=DISTANCE_THRESHOLD):
+            return 1
+        else:
+            return 0
+
+    def _setup_scene(self, gui=False):
+        self._simulation_manager = SimulationManager()
+        self._client = self._simulation_manager.launchSimulation(gui=gui)
+
+        self._robot = self._simulation_manager.spawnPepper(
+            self._client, spawn_ground_plane=True)
+
+        self._robot.goToPosture("Stand", 1.0)
+
+        for _ in range(100):
+            p.stepSimulation()
+
+        self.joints_initial_pose = self._robot.getAnglesPosition(
+            self._robot.joint_dict.keys())
+
+        path = Path(__file__).parent.parent / "assets" / "models"
+        p.setAdditionalSearchPath(str(path))
+
+        self._lack_initial_position = [0.5, 0, 0]
+        self._lack_initial_orientation = [0, 0, 0, 1]
+        self._cube_initial_position = [0.5, 0, 0.6]
+        self._cube_initial_orientation = [0, 0, 0, 1]
+
+        self._lack = p.loadURDF(
+            "Lack/Lack.urdf", self._lack_initial_position, self._lack_initial_orientation)
+        self._cube = p.loadURDF(
+            "cube/cube.urdf", self._cube_initial_position, self._cube_initial_orientation)
+
+        # p.setGravity(0, 0, -9.81)
+
+    def _reset_scene(self):
+        p.resetBasePositionAndOrientation(
+            self._robot.robot_model,
+            posObj=[0.0, 0.0, 0.0],
+            ornObj=[0.0, 0.0, 0.0, 1.0],
+            physicsClientId=self._client)
+
+        self._reset_joint_state()
+
+        p.resetBasePositionAndOrientation(
+            self._lack,
+            posObj=self._lack_initial_position,
+            ornObj=self._lack_initial_orientation,
+            physicsClientId=self._client)
+        p.resetBasePositionAndOrientation(
+            self._cube,
+            posObj=self._cube_initial_position,
+            ornObj=self._cube_initial_orientation,
+            physicsClientId=self._client)
+
+        for _ in range(100):
+            p.stepSimulation()
+
+        return self._get_observation()
+
+    def _reset_joint_state(self):
+        for joint, position in\
+                zip(self._robot.joint_dict.keys(), self.joints_initial_pose):
+            p.setJointMotorControl2(
+                self._robot.robot_model,
+                self._robot.joint_dict[joint].getIndex(),
+                p.VELOCITY_CONTROL,
+                targetVelocity=0.0)
+            p.resetJointState(
+                self._robot.robot_model,
+                self._robot.joint_dict[joint].getIndex(),
+                position)
+
+    def _get_observation(self):
+        cube_pose = p.getBasePositionAndOrientation(self._cube)
+        cube_xy = cube_pose[0][:2]
+        robot_xyy = self._robot.getPosition()
+        joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
+        joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+
+        return {
+            'observation': np.concatenate([cube_xy, robot_xyy, joint_p, joint_v]).astype(np.float32),
+            'achieved_goal': np.array(cube_xy, dtype=np.float32),
+            'desired_goal': self._goal_xy
+        }
+
+    def _is_success(self, achieved_goal, desired_goal):
+        return np.allclose(desired_goal, achieved_goal, atol=DISTANCE_THRESHOLD)
+
+    def _sample_goal(self):
+        return (np.random.sample(2) * [0.5, 0.5] + self._lack_initial_position[:2] - [0.25, 0.25]).astype(np.float32)
+
+    def _is_table_displaced(self):
+        pose = p.getBasePositionAndOrientation(self._lack)
+        current_pose = np.array([e for t in pose for e in t], dtype=np.float32)
+        desired_pose = np.concatenate(
+            [self._lack_initial_position, self._lack_initial_orientation])
+
+        return not np.allclose(desired_pose, current_pose, atol=0.01)
