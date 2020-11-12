@@ -48,7 +48,7 @@ class PepperPushEnv(gym.GoalEnv):
                                    shape=obs['observation'].shape, dtype='float32'),
         ))
 
-        p.setRealTimeSimulation(0)
+        p.setRealTimeSimulation(0, physicsClientId=self._client)
 
     def reset(self):
         self._reset_scene()
@@ -62,7 +62,7 @@ class PepperPushEnv(gym.GoalEnv):
 
         self._robot.setAngles(CONTROLLABLE_JOINTS, action, [MAX_SPEED] * 11)
 
-        p.stepSimulation()
+        p.stepSimulation(physicsClientId=self._client)
 
         obs = self._get_observation()
 
@@ -101,13 +101,13 @@ class PepperPushEnv(gym.GoalEnv):
         self._robot.goToPosture("Stand", 1.0)
 
         for _ in range(100):
-            p.stepSimulation()
+            p.stepSimulation(physicsClientId=self._client)
 
         self.joints_initial_pose = self._robot.getAnglesPosition(
             self._robot.joint_dict.keys())
 
         path = Path(__file__).parent.parent / "assets" / "models"
-        p.setAdditionalSearchPath(str(path))
+        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
 
         self._lack_initial_position = [0.5, 0, 0]
         self._lack_initial_orientation = [0, 0, 0, 1]
@@ -115,11 +115,11 @@ class PepperPushEnv(gym.GoalEnv):
         self._cube_initial_orientation = [0, 0, 0, 1]
 
         self._lack = p.loadURDF(
-            "Lack/Lack.urdf", self._lack_initial_position, self._lack_initial_orientation)
+            "Lack/Lack.urdf", self._lack_initial_position, self._lack_initial_orientation, 
+            physicsClientId=self._client)
         self._cube = p.loadURDF(
-            "cube/cube.urdf", self._cube_initial_position, self._cube_initial_orientation)
-
-        # p.setGravity(0, 0, -9.81)
+            "cube/cube.urdf", self._cube_initial_position, self._cube_initial_orientation, 
+            physicsClientId=self._client)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
@@ -142,7 +142,7 @@ class PepperPushEnv(gym.GoalEnv):
             physicsClientId=self._client)
 
         for _ in range(100):
-            p.stepSimulation()
+            p.stepSimulation(physicsClientId=self._client)
 
         return self._get_observation()
 
@@ -153,14 +153,16 @@ class PepperPushEnv(gym.GoalEnv):
                 self._robot.robot_model,
                 self._robot.joint_dict[joint].getIndex(),
                 p.VELOCITY_CONTROL,
-                targetVelocity=0.0)
+                targetVelocity=0.0, 
+                physicsClientId=self._client)
             p.resetJointState(
                 self._robot.robot_model,
                 self._robot.joint_dict[joint].getIndex(),
-                position)
+                position,
+                physicsClientId=self._client)
 
     def _get_observation(self):
-        cube_pose = p.getBasePositionAndOrientation(self._cube)
+        cube_pose = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)
         cube_xy = cube_pose[0][:2]
         robot_xyy = self._robot.getPosition()
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
@@ -179,7 +181,7 @@ class PepperPushEnv(gym.GoalEnv):
         return (np.random.sample(2) * [0.5, 0.5] + self._lack_initial_position[:2] - [0.25, 0.25]).astype(np.float32)
 
     def _is_table_displaced(self):
-        pose = p.getBasePositionAndOrientation(self._lack)
+        pose = p.getBasePositionAndOrientation(self._lack, physicsClientId=self._client)
         current_pose = np.array([e for t in pose for e in t], dtype=np.float32)
         desired_pose = np.concatenate(
             [self._lack_initial_position, self._lack_initial_orientation])
