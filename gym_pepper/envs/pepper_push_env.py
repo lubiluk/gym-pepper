@@ -32,7 +32,8 @@ CONTROLLABLE_JOINTS = [
 class PepperPushEnv(gym.GoalEnv):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, gui=False):
+    def __init__(self, gui=False, sim_steps_per_action=1):
+        self._sim_steps = sim_steps_per_action
         self._setup_scene(gui)
 
         self._goal_xy = self._sample_goal()
@@ -62,7 +63,8 @@ class PepperPushEnv(gym.GoalEnv):
 
         self._robot.setAngles(CONTROLLABLE_JOINTS, action, [MAX_SPEED] * 11)
 
-        p.stepSimulation(physicsClientId=self._client)
+        for _ in range(self._sim_steps):
+            p.stepSimulation(physicsClientId=self._client)
 
         obs = self._get_observation()
 
@@ -100,7 +102,7 @@ class PepperPushEnv(gym.GoalEnv):
 
         self._robot.goToPosture("Stand", 1.0)
 
-        for _ in range(100):
+        for _ in range(1000):
             p.stepSimulation(physicsClientId=self._client)
 
         self.joints_initial_pose = self._robot.getAnglesPosition(
@@ -141,7 +143,7 @@ class PepperPushEnv(gym.GoalEnv):
             ornObj=self._cube_initial_orientation,
             physicsClientId=self._client)
 
-        for _ in range(100):
+        for _ in range(1000):
             p.stepSimulation(physicsClientId=self._client)
 
         return self._get_observation()
