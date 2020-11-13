@@ -1,7 +1,7 @@
 import gym
 import gym_pepper
 
-env = gym.make('PepperPush-v0')
+env = gym.make('PepperPush-v0', gui=True)
 
 env.reset()
 

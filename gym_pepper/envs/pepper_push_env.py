@@ -34,7 +34,9 @@ class PepperPushEnv(gym.GoalEnv):
     def __init__(self, gui=False, sim_steps_per_action=1, max_motion_speed=0.5):
         self._sim_steps = sim_steps_per_action
         self._max_speed = max_motion_speed
-        self._setup_scene(gui)
+        self._gui = gui
+
+        self._setup_scene()
 
         self._goal_xy = self._sample_goal()
         obs = self._get_observation()
@@ -54,6 +56,9 @@ class PepperPushEnv(gym.GoalEnv):
     def reset(self):
         self._reset_scene()
         self._goal_xy = self._sample_goal()
+
+        if self._gui:
+            self._place_ghosts()
 
         return self._get_observation()
 
@@ -93,9 +98,9 @@ class PepperPushEnv(gym.GoalEnv):
         else:
             return 0
 
-    def _setup_scene(self, gui=False):
+    def _setup_scene(self):
         self._simulation_manager = SimulationManager()
-        self._client = self._simulation_manager.launchSimulation(gui=gui)
+        self._client = self._simulation_manager.launchSimulation(gui=self._gui)
 
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True)
@@ -122,6 +127,12 @@ class PepperPushEnv(gym.GoalEnv):
         self._cube = p.loadURDF(
             "cube/cube.urdf", self._cube_initial_position, self._cube_initial_orientation, 
             physicsClientId=self._client)
+
+        if self._gui:
+            # load ghosts
+            self._cube_ghost = p.loadURDF(
+                "cube/cube_ghost.urdf", self._cube_initial_position, self._cube_initial_orientation, 
+                physicsClientId=self._client, useFixedBase=True)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
@@ -189,3 +200,11 @@ class PepperPushEnv(gym.GoalEnv):
             [self._lack_initial_position, self._lack_initial_orientation])
 
         return not np.allclose(desired_pose, current_pose, atol=0.01)
+
+    def _place_ghosts(self):
+        cube_pose = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)
+        p.resetBasePositionAndOrientation(
+            self._cube_ghost,
+            posObj=list(self._goal_xy) + [cube_pose[0][2]],
+            ornObj=self._cube_initial_orientation,
+            physicsClientId=self._client)
