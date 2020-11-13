@@ -13,7 +13,6 @@ from qibullet import PepperVirtual, SimulationManager
 TIME_STEP = 0.1
 DISTANCE_THRESHOLD = 0.04
 WORKSPACE_RADIUS = 2.0
-MAX_SPEED = 0.5
 CONTROLLABLE_JOINTS = [
     "HeadYaw",
     "HeadPitch",
@@ -32,8 +31,9 @@ CONTROLLABLE_JOINTS = [
 class PepperPushEnv(gym.GoalEnv):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, gui=False, sim_steps_per_action=1):
+    def __init__(self, gui=False, sim_steps_per_action=1, max_motion_speed=0.5):
         self._sim_steps = sim_steps_per_action
+        self._max_speed = max_motion_speed
         self._setup_scene(gui)
 
         self._goal_xy = self._sample_goal()
@@ -61,7 +61,7 @@ class PepperPushEnv(gym.GoalEnv):
         action = list(action)
         assert len(action) == len(self.action_space.high.tolist())
 
-        self._robot.setAngles(CONTROLLABLE_JOINTS, action, [MAX_SPEED] * 11)
+        self._robot.setAngles(CONTROLLABLE_JOINTS, action, [self._max_speed] * 11)
 
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
