@@ -14,6 +14,9 @@ TIME_STEP = 0.1
 DISTANCE_THRESHOLD = 0.04
 WORKSPACE_RADIUS = 2.0
 CONTROLLABLE_JOINTS = [
+    "KneePitch",
+    "HipPitch",
+    "HipRoll",
     "HeadYaw",
     "HeadPitch",
     "LShoulderPitch",
@@ -22,9 +25,6 @@ CONTROLLABLE_JOINTS = [
     "LElbowRoll",
     "LWristYaw",
     "LHand",
-    "HipRoll",
-    "HipPitch",
-    "KneePitch",
 ]
 
 
