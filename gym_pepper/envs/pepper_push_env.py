@@ -100,7 +100,7 @@ class PepperPushEnv(gym.GoalEnv):
 
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
-        self._client = self._simulation_manager.launchSimulation(gui=self._gui)
+        self._client = self._simulation_manager.launchSimulation(gui=self._gui, use_shared_memory=True)
 
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True)
