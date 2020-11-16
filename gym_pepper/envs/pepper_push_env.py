@@ -51,8 +51,6 @@ class PepperPushEnv(gym.GoalEnv):
                                    shape=obs['observation'].shape, dtype='float32'),
         ))
 
-        p.setRealTimeSimulation(0, physicsClientId=self._client)
-
     def reset(self):
         self._reset_scene()
         self._goal_xy = self._sample_goal()
@@ -101,6 +99,8 @@ class PepperPushEnv(gym.GoalEnv):
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
         self._client = self._simulation_manager.launchSimulation(gui=self._gui, use_shared_memory=True)
+        
+        p.setRealTimeSimulation(0, physicsClientId=self._client)
 
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True)
