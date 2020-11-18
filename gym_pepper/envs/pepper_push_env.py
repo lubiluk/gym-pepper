@@ -31,7 +31,7 @@ CONTROLLABLE_JOINTS = [
 class PepperPushEnv(gym.GoalEnv):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, gui=False, sim_steps_per_action=1, max_motion_speed=0.5):
+    def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5):
         self._sim_steps = sim_steps_per_action
         self._max_speed = max_motion_speed
         self._gui = gui
