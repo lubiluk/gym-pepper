@@ -14,7 +14,7 @@ end = time.time()
 print("=== Reset === {}".format(end - start))
 
 start = time.time()
-for _ in range(15000):
+for _ in range(1000):
     env.step([1.0] * 11)
 end = time.time()
 print("=== Act1 === {}".format(end - start))
@@ -25,7 +25,7 @@ end = time.time()
 print("=== Reset === {}".format(end - start))
 
 start = time.time()
-for _ in range(15000):
+for _ in range(1000):
     env.step(np.random.sample(11))
 end = time.time()
 print("=== Act2 === {}".format(end - start))

@@ -98,7 +98,7 @@ class PepperPushEnv(gym.GoalEnv):
 
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
-        self._client = self._simulation_manager.launchSimulation(gui=self._gui, use_shared_memory=True)
+        self._client = self._simulation_manager.launchSimulation(gui=self._gui, auto_step=False)
         
         p.setRealTimeSimulation(0, physicsClientId=self._client)
 
