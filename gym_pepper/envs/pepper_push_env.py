@@ -100,8 +100,6 @@ class PepperPushEnv(gym.GoalEnv):
         self._simulation_manager = SimulationManager()
         self._client = self._simulation_manager.launchSimulation(gui=self._gui, auto_step=False)
         
-        p.setRealTimeSimulation(0, physicsClientId=self._client)
-
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True)
 
@@ -175,15 +173,17 @@ class PepperPushEnv(gym.GoalEnv):
                 physicsClientId=self._client)
 
     def _get_observation(self):
-        cube_pose = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)
-        cube_xy = cube_pose[0][:2]
-        robot_xyy = self._robot.getPosition()
+        obj_pos = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)[0]
+        obj_vel = p.getBaseVelocity(self._cube, physicsClientId=self._client)[0]
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        hand_idx = self._robot.link_dict["l_hand"].getIndex()
+        hand_pos = p.getLinkState(self._robot.getRobotModel(), hand_idx, physicsClientId=self._client)[0]
+        obj_rel_pos = np.array(obj_pos) - np.array(hand_pos)
 
         return {
-            'observation': np.concatenate([cube_xy, robot_xyy, joint_p, joint_v]).astype(np.float32),
-            'achieved_goal': np.array(cube_xy, dtype=np.float32),
+            'observation': np.concatenate([obj_pos, obj_vel, joint_p, joint_v, obj_rel_pos]).astype(np.float32),
+            'achieved_goal': np.array(obj_pos[:2], dtype=np.float32),
             'desired_goal': self._goal_xy
         }
 
