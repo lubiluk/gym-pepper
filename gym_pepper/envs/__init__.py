@@ -1,1 +1,4 @@
 from gym_pepper.envs.pepper_push_env import PepperPushEnv
+from gym_pepper.envs.pepper_ik_push_env import PepperIkPushEnv
+from gym_pepper.envs.pepper_arm_vel_push_env import PepperArmVelPushEnv
+from gym_pepper.envs.pepper_arm_pos_push_env import PepperArmPosPushEnv

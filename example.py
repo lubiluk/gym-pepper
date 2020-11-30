@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 start = time.time()
-env = gym.make('PepperPush-v0', gui=False)
+env = gym.make('PepperVelPush-v0', gui=True)
 end = time.time()
 print("=== Make === {}".format(end - start))
 
@@ -15,7 +15,9 @@ print("=== Reset === {}".format(end - start))
 
 start = time.time()
 for _ in range(1000):
-    env.step([1.0] * 11)
+    env.step([1.0] * 6)
+for _ in range(1000):
+    env.step([-1.0] * 6)
 end = time.time()
 print("=== Act1 === {}".format(end - start))
 
@@ -26,6 +28,6 @@ print("=== Reset === {}".format(end - start))
 
 start = time.time()
 for _ in range(1000):
-    env.step(np.random.sample(11))
+    env.step(np.random.sample(6) * 2 - 1)
 end = time.time()
 print("=== Act2 === {}".format(end - start))
