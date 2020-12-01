@@ -14,3 +14,8 @@ register(
     id='PepperArmPosPush-v0',
     entry_point='gym_pepper.envs:PepperArmPosPushEnv',
 )
+
+register(
+    id='PepperReach-v0',
+    entry_point='gym_pepper.envs:PepperReachEnv',
+)

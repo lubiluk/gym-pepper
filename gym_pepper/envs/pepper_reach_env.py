@@ -28,20 +28,21 @@ CONTROLLABLE_JOINTS = [
 ]
 
 
-class PepperIkPushEnv(gym.GoalEnv):
+class PepperReachEnv(gym.GoalEnv):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5):
+    def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5, dense=False):
         self._sim_steps = sim_steps_per_action
         self._max_speed = max_motion_speed
         self._gui = gui
+        self._dense = dense
 
         self._setup_scene()
 
-        self._goal_xy = self._sample_goal()
+        self._goal = self._sample_goal()
         obs = self._get_observation()
 
-        self.action_space = spaces.Box(-1.0, 1.0, shape=(3,), dtype='float32')
+        self.action_space = spaces.Box(-2.0857, 2.0857, shape=(11,), dtype='float32')
         self.observation_space = spaces.Dict(dict(
             desired_goal=spaces.Box(-np.inf, np.inf,
                                     shape=obs['achieved_goal'].shape, dtype='float32'),
@@ -53,7 +54,7 @@ class PepperIkPushEnv(gym.GoalEnv):
 
     def reset(self):
         self._reset_scene()
-        self._goal_xy = self._sample_goal()
+        self._goal = self._sample_goal()
 
         if self._gui:
             self._place_ghosts()
@@ -64,16 +65,6 @@ class PepperIkPushEnv(gym.GoalEnv):
         action = list(action)
         assert len(action) == len(self.action_space.high.tolist())
 
-        rid = self._robot.getModelId()
-        lid = self.link_dict["r_hand"].getIndex()
-
-        lpos = np.array(p.getLinkState(rid, lid, physicsClientId=self._client)[0])
-        vels = np.array(action) * 0.05
-        dpos = lpos + vels
-
-        ik = p.calculateInverseKinematics(rid, lid, dpos)
-
-        
         self._robot.setAngles(CONTROLLABLE_JOINTS, action, [self._max_speed] * 11)
 
         for _ in range(self._sim_steps):
@@ -81,12 +72,12 @@ class PepperIkPushEnv(gym.GoalEnv):
 
         obs = self._get_observation()
 
-        is_success = self._is_success(obs['achieved_goal'], self._goal_xy)
+        is_success = self._is_success(obs['achieved_goal'], self._goal)
         info = {
             'is_success': is_success,
         }
         reward = self.compute_reward(
-            obs['achieved_goal'], self._goal_xy, info)
+            obs['achieved_goal'], self._goal, info)
         done = is_success or self._is_table_displaced()
 
         return (obs, reward, done, info)
@@ -101,7 +92,10 @@ class PepperIkPushEnv(gym.GoalEnv):
         np.random.seed(seed or 0)
 
     def compute_reward(self, achieved_goal, desired_goal, info):
-        if np.allclose(desired_goal, achieved_goal, atol=DISTANCE_THRESHOLD):
+        if self._dense:
+            return -np.linalg.norm(desired_goal - achieved_goal, axis=-1)
+
+        if np.allclose(desired_goal, achieved_goal, rtol=0, atol=DISTANCE_THRESHOLD):
             return 1
         else:
             return 0
@@ -123,24 +117,18 @@ class PepperIkPushEnv(gym.GoalEnv):
 
         path = Path(__file__).parent.parent / "assets" / "models"
         p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
-
-        self._lack_initial_position = [0.5, 0, 0]
-        self._lack_initial_orientation = [0, 0, 0, 1]
-        self._cube_initial_position = [0.5, 0, 0.6]
-        self._cube_initial_orientation = [0, 0, 0, 1]
-
-        self._lack = p.loadURDF(
-            "Lack/Lack.urdf", self._lack_initial_position, self._lack_initial_orientation, 
-            physicsClientId=self._client)
-        self._cube = p.loadURDF(
-            "cube/cube.urdf", self._cube_initial_position, self._cube_initial_orientation, 
+        self._table_init_pos = [0.5, 0, 0]
+        self._table_init_rot = [0, 0, 0, 1]
+        self._obj_init_pos = [0.5, 0, 0.6]
+        self._obj_init_rot = [0, 0, 0, 1]
+        self._table = p.loadURDF(
+            "Lack/Lack.urdf", self._table_init_pos, self._table_init_rot, 
             physicsClientId=self._client)
 
         if self._gui:
-            # load ghosts
-            self._cube_ghost = p.loadURDF(
-                "cube/cube_ghost.urdf", self._cube_initial_position, self._cube_initial_orientation, 
-                physicsClientId=self._client, useFixedBase=True)
+            self._obj_ghost = p.loadURDF(
+                    "cube/cube_ghost.urdf", self._obj_init_pos, self._obj_init_rot, 
+                    physicsClientId=self._client, useFixedBase=True)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
@@ -152,16 +140,11 @@ class PepperIkPushEnv(gym.GoalEnv):
         self._reset_joint_state()
 
         p.resetBasePositionAndOrientation(
-            self._lack,
-            posObj=self._lack_initial_position,
-            ornObj=self._lack_initial_orientation,
+            self._table,
+            posObj=self._table_init_pos,
+            ornObj=self._table_init_rot,
             physicsClientId=self._client)
-        p.resetBasePositionAndOrientation(
-            self._cube,
-            posObj=self._cube_initial_position,
-            ornObj=self._cube_initial_orientation,
-            physicsClientId=self._client)
-
+            
         for _ in range(1000):
             p.stepSimulation(physicsClientId=self._client)
 
@@ -183,38 +166,39 @@ class PepperIkPushEnv(gym.GoalEnv):
                 physicsClientId=self._client)
 
     def _get_observation(self):
-        obj_pos = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)[0]
-        obj_vel = p.getBaseVelocity(self._cube, physicsClientId=self._client)[0]
+        goal_pos = self._goal
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         hand_idx = self._robot.link_dict["l_hand"].getIndex()
         hand_pos = p.getLinkState(self._robot.getRobotModel(), hand_idx, physicsClientId=self._client)[0]
-        obj_rel_pos = np.array(obj_pos) - np.array(hand_pos)
+        obj_rel_pos = np.array(goal_pos) - np.array(hand_pos)
 
         return {
-            'observation': np.concatenate([obj_pos, obj_vel, joint_p, joint_v, obj_rel_pos]).astype(np.float32),
-            'achieved_goal': np.array(obj_pos[:2], dtype=np.float32),
-            'desired_goal': self._goal_xy
+            'observation': np.concatenate([goal_pos, joint_p, joint_v, obj_rel_pos]).astype(np.float32),
+            'achieved_goal': np.array(hand_pos, dtype=np.float32),
+            'desired_goal': goal_pos
         }
 
     def _is_success(self, achieved_goal, desired_goal):
-        return np.allclose(desired_goal, achieved_goal, atol=DISTANCE_THRESHOLD)
+        return np.allclose(desired_goal, achieved_goal, rtol=0, atol=DISTANCE_THRESHOLD)
 
     def _sample_goal(self):
-        return (np.random.sample(2) * [0.5, 0.5] + self._lack_initial_position[:2] - [0.25, 0.25]).astype(np.float32)
+        return np.append(
+            (np.random.sample(2) * [0.5, 0.5] + self._table_init_pos[:2] - [0.25, 0.25]).astype(np.float32),
+            self._obj_init_pos[2]
+        )
 
     def _is_table_displaced(self):
-        pose = p.getBasePositionAndOrientation(self._lack, physicsClientId=self._client)
+        pose = p.getBasePositionAndOrientation(self._table, physicsClientId=self._client)
         current_pose = np.array([e for t in pose for e in t], dtype=np.float32)
         desired_pose = np.concatenate(
-            [self._lack_initial_position, self._lack_initial_orientation])
+            [self._table_init_pos, self._table_init_rot])
 
-        return not np.allclose(desired_pose, current_pose, atol=0.01)
+        return not np.allclose(desired_pose, current_pose, rtol=0, atol=0.01)
 
     def _place_ghosts(self):
-        cube_pose = p.getBasePositionAndOrientation(self._cube, physicsClientId=self._client)
         p.resetBasePositionAndOrientation(
-            self._cube_ghost,
-            posObj=list(self._goal_xy) + [cube_pose[0][2]],
-            ornObj=self._cube_initial_orientation,
+            self._obj_ghost,
+            posObj=self._goal,
+            ornObj=self._obj_init_rot,
             physicsClientId=self._client)
