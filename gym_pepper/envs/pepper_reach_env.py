@@ -33,7 +33,7 @@ class PepperReachEnv(gym.GoalEnv):
 
     def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5, dense=False):
         self._sim_steps = sim_steps_per_action
-        self._max_speed = max_motion_speed
+        self._max_speeds = [max_motion_speed] * 11
         self._gui = gui
         self._dense = dense
 
@@ -65,7 +65,7 @@ class PepperReachEnv(gym.GoalEnv):
         action = list(action)
         assert len(action) == len(self.action_space.high.tolist())
 
-        self._robot.setAngles(CONTROLLABLE_JOINTS, action, [self._max_speed] * 11)
+        self._robot.setAngles(CONTROLLABLE_JOINTS, action, self._max_speeds)
 
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
@@ -95,7 +95,7 @@ class PepperReachEnv(gym.GoalEnv):
         if self._dense:
             return -np.linalg.norm(desired_goal - achieved_goal, axis=-1)
 
-        if np.allclose(desired_goal, achieved_goal, rtol=0, atol=DISTANCE_THRESHOLD):
+        if np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD:
             return 1
         else:
             return 0
@@ -108,9 +108,6 @@ class PepperReachEnv(gym.GoalEnv):
             self._client, spawn_ground_plane=True)
 
         self._robot.goToPosture("Stand", 1.0)
-
-        for _ in range(1000):
-            p.stepSimulation(physicsClientId=self._client)
 
         self.joints_initial_pose = self._robot.getAnglesPosition(
             self._robot.joint_dict.keys())
@@ -130,6 +127,9 @@ class PepperReachEnv(gym.GoalEnv):
                     "cube/cube_ghost.urdf", self._obj_init_pos, self._obj_init_rot, 
                     physicsClientId=self._client, useFixedBase=True)
 
+        for _ in range(1000):
+            p.stepSimulation(physicsClientId=self._client)
+
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
             self._robot.robot_model,
@@ -145,7 +145,7 @@ class PepperReachEnv(gym.GoalEnv):
             ornObj=self._table_init_rot,
             physicsClientId=self._client)
             
-        for _ in range(1000):
+        for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
 
         return self._get_observation()
@@ -180,7 +180,7 @@ class PepperReachEnv(gym.GoalEnv):
         }
 
     def _is_success(self, achieved_goal, desired_goal):
-        return np.allclose(desired_goal, achieved_goal, rtol=0, atol=DISTANCE_THRESHOLD)
+        return np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD
 
     def _sample_goal(self):
         return np.append(
