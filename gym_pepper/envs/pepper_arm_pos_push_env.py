@@ -93,10 +93,7 @@ class PepperArmPosPushEnv(gym.GoalEnv):
         np.random.seed(seed or 0)
 
     def compute_reward(self, achieved_goal, desired_goal, info):
-        if np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD:
-            return 1
-        else:
-            return 0
+        return (np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD).astype(np.float32)
 
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
