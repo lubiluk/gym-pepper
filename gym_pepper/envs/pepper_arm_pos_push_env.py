@@ -134,9 +134,6 @@ class PepperArmPosPushEnv(gym.GoalEnv):
                 "cube/cube_ghost.urdf", self._cube_initial_position, self._cube_initial_orientation, 
                 physicsClientId=self._client, useFixedBase=True)
 
-        for _ in range(1000):
-            p.stepSimulation(physicsClientId=self._client)
-
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
             self._robot.robot_model,

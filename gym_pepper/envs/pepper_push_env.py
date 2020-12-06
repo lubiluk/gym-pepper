@@ -102,6 +102,9 @@ class PepperPushEnv(gym.GoalEnv):
 
         self._robot.goToPosture("Stand", 1.0)
 
+        for _ in range(1000):
+            p.stepSimulation(physicsClientId=self._client)
+
         self.joints_initial_pose = self._robot.getAnglesPosition(
             self._robot.joint_dict.keys())
 
@@ -125,9 +128,6 @@ class PepperPushEnv(gym.GoalEnv):
             self._cube_ghost = p.loadURDF(
                 "cube/cube_ghost.urdf", self._cube_initial_position, self._cube_initial_orientation, 
                 physicsClientId=self._client, useFixedBase=True)
-
-        for _ in range(1000):
-            p.stepSimulation(physicsClientId=self._client)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(

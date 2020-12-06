@@ -106,6 +106,10 @@ class PepperReachEnv(gym.GoalEnv):
 
         self._robot.goToPosture("Stand", 1.0)
 
+        # Give the robot time to settle in the position
+        for _ in range(1000):
+            p.stepSimulation(physicsClientId=self._client)
+
         self.joints_initial_pose = self._robot.getAnglesPosition(
             self._robot.joint_dict.keys())
 
@@ -123,9 +127,6 @@ class PepperReachEnv(gym.GoalEnv):
             self._obj_ghost = p.loadURDF(
                     "cube/cube_ghost.urdf", self._obj_init_pos, self._obj_init_rot, 
                     physicsClientId=self._client, useFixedBase=True)
-
-        for _ in range(1000):
-            p.stepSimulation(physicsClientId=self._client)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
