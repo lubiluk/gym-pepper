@@ -6,16 +6,11 @@ register(
 )
 
 register(
-    id='PepperArmVelPush-v0',
-    entry_point='gym_pepper.envs:PepperArmVelPushEnv',
-)
-
-register(
-    id='PepperArmPosPush-v0',
-    entry_point='gym_pepper.envs:PepperArmPosPushEnv',
-)
-
-register(
     id='PepperReach-v0',
     entry_point='gym_pepper.envs:PepperReachEnv',
+)
+
+register(
+    id='PepperPushCam-v0',
+    entry_point='gym_pepper.envs:PepperPushCamEnv',
 )

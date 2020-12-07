@@ -4,6 +4,7 @@
 from pathlib import Path
 
 import gym
+import cv2
 import numpy as np
 import pybullet as p
 from gym import error, spaces, utils
@@ -28,7 +29,7 @@ CONTROLLABLE_JOINTS = [
 ]
 
 
-class PepperPushEnv(gym.GoalEnv):
+class PepperPushCamEnv(gym.GoalEnv):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5):
@@ -126,6 +127,9 @@ class PepperPushEnv(gym.GoalEnv):
 
         self._obj_start_pos = p.getBasePositionAndOrientation(self._obj, physicsClientId=self._client)[0]
 
+        # Setup camera
+        self._cam1 = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_TOP)
+
         if self._gui:
             # load ghosts
             self._ghost = p.loadURDF(
@@ -173,6 +177,10 @@ class PepperPushEnv(gym.GoalEnv):
                 physicsClientId=self._client)
 
     def _get_observation(self):
+        img = self._robot.getCameraFrame(self._cam1)
+        cv2.imshow("synthetic top camera", img)
+        cv2.waitKey(1)
+
         obj_pos = p.getBasePositionAndOrientation(self._obj, physicsClientId=self._client)[0]
         obj_vel = p.getBaseVelocity(self._obj, physicsClientId=self._client)[0]
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
