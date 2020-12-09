@@ -12,8 +12,6 @@ from qibullet import PepperVirtual, SimulationManager
 
 DISTANCE_THRESHOLD = 0.04
 CONTROLLABLE_JOINTS = [
-    "KneePitch",
-    "HipPitch",
     "HipRoll",
     "HeadYaw",
     "HeadPitch",
@@ -30,10 +28,10 @@ class PepperReachCamEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5, dense=True
+        self, gui=False, sim_steps_per_action=10, max_motion_speed=0.3, dense=True
     ):
         self._sim_steps = sim_steps_per_action
-        self._max_speeds = [max_motion_speed] * 11
+        self._max_speeds = [max_motion_speed] * len(CONTROLLABLE_JOINTS)
         self._gui = gui
         self._dense = dense
 
@@ -41,7 +39,9 @@ class PepperReachCamEnv(gym.Env):
 
         obs = self._get_observation()
 
-        self.action_space = spaces.Box(-2.0857, 2.0857, shape=(11,), dtype="float32")
+        self.action_space = spaces.Box(
+            -2.0857, 2.0857, shape=(len(CONTROLLABLE_JOINTS),), dtype="float32"
+        )
 
         self.observation_space = spaces.Dict(
             dict(
@@ -144,6 +144,16 @@ class PepperReachCamEnv(gym.Env):
 
         self._robot.goToPosture("Stand", 1.0)
 
+        for _ in range(500):
+            p.stepSimulation(physicsClientId=self._client)
+
+        self._robot.setAngles(
+            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -1.0385, 0.0], [0.5] * 3
+        )
+
+        for _ in range(500):
+            p.stepSimulation(physicsClientId=self._client)
+
         path = Path(__file__).parent.parent / "assets" / "models"
         p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
 
@@ -166,7 +176,7 @@ class PepperReachCamEnv(gym.Env):
         )
 
         # Let things fall down
-        for _ in range(1000):
+        for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
         self.joints_initial_pose = self._robot.getAnglesPosition(
