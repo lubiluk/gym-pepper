@@ -11,6 +11,6 @@ register(
 )
 
 register(
-    id='PepperPushCam-v0',
-    entry_point='gym_pepper.envs:PepperPushCamEnv',
+    id='PepperReachCam-v0',
+    entry_point='gym_pepper.envs:PepperReachCamEnv',
 )
