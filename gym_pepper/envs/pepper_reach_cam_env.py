@@ -148,7 +148,7 @@ class PepperReachCamEnv(gym.Env):
             p.stepSimulation(physicsClientId=self._client)
 
         self._robot.setAngles(
-            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -1.0385, 0.0], [0.5] * 3
+            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -0.9, 0.0], [0.5] * 3
         )
 
         for _ in range(500):
@@ -157,13 +157,13 @@ class PepperReachCamEnv(gym.Env):
         path = Path(__file__).parent.parent / "assets" / "models"
         p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
 
-        self._table_init_pos = [0.5, 0, 0]
+        self._table_init_pos = [0.8, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
-        self._obj_init_pos = [0.5, 0, 0.6]
+        self._obj_init_pos = [0.5, 0, 0.75]
         self._obj_init_ori = [0, 0, 0, 1]
 
         self._table = p.loadURDF(
-            "Lack/Lack.urdf",
+            "table/table.urdf",
             self._table_init_pos,
             self._table_init_ori,
             physicsClientId=self._client,
@@ -259,8 +259,8 @@ class PepperReachCamEnv(gym.Env):
     def _sample_goal(self):
         return np.append(
             (
-                np.random.sample(2) * [0.4, 0.4]
-                + self._table_init_pos[:2]
+                np.random.sample(2) * [0.2, 0.4]
+                + self._obj_init_pos[:2]
                 - [0.25, 0.25]
             ).astype(np.float32),
             self._obj_init_pos[2],
