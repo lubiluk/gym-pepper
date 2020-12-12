@@ -13,8 +13,6 @@ from qibullet import PepperVirtual, SimulationManager
 DISTANCE_THRESHOLD = 0.04
 CONTROLLABLE_JOINTS = [
     "HipRoll",
-    "HeadYaw",
-    "HeadPitch",
     "LShoulderPitch",
     "LShoulderRoll",
     "LElbowYaw",
@@ -44,18 +42,8 @@ class PepperReachEnv(gym.GoalEnv):
             -2.0857, 2.0857, shape=(len(CONTROLLABLE_JOINTS),), dtype="float32"
         )
 
-        self.observation_space = spaces.Dict(
-            dict(
-                desired_goal=spaces.Box(
-                    -np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"
-                ),
-                achieved_goal=spaces.Box(
-                    -np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"
-                ),
-                observation=spaces.Box(
-                    -np.inf, np.inf, shape=obs["observation"].shape, dtype="float32"
-                ),
-            )
+        self.observation_space = spaces.Box(
+            -np.inf, np.inf, shape=obs.shape, dtype="float32"
         )
 
     def reset(self):
@@ -75,11 +63,22 @@ class PepperReachEnv(gym.GoalEnv):
         obs = self._get_observation()
 
         is_success = self._is_success()
+        hand_idx = self._robot.link_dict["l_hand"].getIndex()
+        hand_pos = np.array(
+            p.getLinkState(
+                self._robot.getRobotModel(), hand_idx, physicsClientId=self._client
+            )[0]
+        )
+        obj_pos = np.array(
+            p.getBasePositionAndOrientation(self._obj, physicsClientId=self._client)[0]
+        )
+        is_safety_violated = self._is_table_touched() or self._is_table_displaced()
+
         info = {
             "is_success": is_success,
         }
-        reward = self.compute_reward(info)
-        done = is_success or self._is_table_displaced()
+        reward = self.compute_reward(is_success, obj_pos, hand_pos, is_safety_violated)
+        done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
 
@@ -92,30 +91,22 @@ class PepperReachEnv(gym.GoalEnv):
     def seed(self, seed=None):
         np.random.seed(seed or 0)
 
+    def compute_reward(self, is_success, obj_pos, hand_pos, is_safety_violated):
+        if is_success:
+            return 10.0 if self._dense else 1.0
+
+        if self._dense:
+            if is_safety_violated:
+                return -10.0
+
+            return -np.linalg.norm(obj_pos - hand_pos, axis=-1).astype(np.float32)
+
+        return 0.0
+
     def _is_success(self):
         cont = p.getContactPoints(self._robot.getRobotModel(), self._obj)
 
         return len(cont) > 0
-
-    def compute_reward(self, info):
-        if info["is_success"]:
-            return 1.0
-
-        if self._dense:
-            hand_idx = self._robot.link_dict["l_hand"].getIndex()
-            hand_pos = np.array(
-                p.getLinkState(
-                    self._robot.getRobotModel(), hand_idx, physicsClientId=self._client
-                )[0]
-            )
-            obj_pos = np.array(
-                p.getBasePositionAndOrientation(
-                    self._obj, physicsClientId=self._client
-                )[0]
-            )
-            return np.linalg.norm(obj_pos - hand_pos, axis=-1).astype(np.float32)
-
-        return 0.0
 
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
@@ -133,7 +124,7 @@ class PepperReachEnv(gym.GoalEnv):
             p.stepSimulation(physicsClientId=self._client)
 
         self._robot.setAngles(
-            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -0.9, 0.0], [0.5] * 3
+            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -0.9, -0.6], [0.5] * 3
         )
 
         for _ in range(500):
@@ -231,13 +222,9 @@ class PepperReachEnv(gym.GoalEnv):
         )[0]
         obj_rel_pos = np.array(goal_pos) - np.array(hand_pos)
 
-        return {
-            "observation": np.concatenate(
-                [goal_pos, joint_p, joint_v, obj_rel_pos]
-            ).astype(np.float32),
-            "achieved_goal": np.array(hand_pos, dtype=np.float32),
-            "desired_goal": goal_pos,
-        }
+        return np.concatenate([goal_pos, joint_p, joint_v, obj_rel_pos]).astype(
+            np.float32
+        )
 
     def _sample_goal(self):
         return np.append(
@@ -255,3 +242,8 @@ class PepperReachEnv(gym.GoalEnv):
         desired_pose = np.concatenate([self._table_init_pos, self._table_init_ori])
 
         return not np.allclose(desired_pose, current_pose, atol=0.01)
+
+    def _is_table_touched(self):
+        cont = p.getContactPoints(self._robot.getRobotModel(), self._table)
+
+        return len(cont) > 0
