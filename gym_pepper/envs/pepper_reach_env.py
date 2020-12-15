@@ -145,7 +145,7 @@ class PepperReachEnv(gym.GoalEnv):
             physicsClientId=self._client,
         )
         self._obj = p.loadURDF(
-            "cube/cube.urdf",
+            "brick/brick.urdf",
             self._obj_init_pos,
             self._obj_init_ori,
             physicsClientId=self._client,

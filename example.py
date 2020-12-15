@@ -2,7 +2,7 @@ import gym
 import gym_pepper
 import time
 import numpy as np
-import cv2
+# import cv2
 
 start = time.time()
 env = gym.make("PepperReach-v0", gui=True)
@@ -29,7 +29,7 @@ print("=== Reset === {}".format(end - start))
 
 start = time.time()
 for _ in range(1000):
-    o, r, d, i = env.step(np.random.sample(9) * 2 - 1)
+    o, r, d, i = env.step(np.random.sample(7) * 2 - 1)
     # cv2.imshow("synthetic top camera", o["camera_top"])
     # cv2.imshow("synthetic bottom camera", o["camera_bottom"])
     # cv2.imshow("synthetic depth camera", o["camera_depth"])
