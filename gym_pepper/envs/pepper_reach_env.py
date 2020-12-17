@@ -133,13 +133,13 @@ class PepperReachEnv(gym.GoalEnv):
         path = Path(__file__).parent.parent / "assets" / "models"
         p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
 
-        self._table_init_pos = [0.8, 0, 0]
+        self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
         self._obj_init_pos = [0.5, 0, 0.75]
         self._obj_init_ori = [0, 0, 0, 1]
 
         self._table = p.loadURDF(
-            "table/table.urdf",
+            "adjustable_table/adjustable_table.urdf",
             self._table_init_pos,
             self._table_init_ori,
             physicsClientId=self._client,
