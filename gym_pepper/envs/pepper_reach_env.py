@@ -10,7 +10,6 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 from qibullet import PepperVirtual, SimulationManager
 
-DISTANCE_THRESHOLD = 0.04
 CONTROLLABLE_JOINTS = [
     "HipRoll",
     "LShoulderPitch",
@@ -22,7 +21,7 @@ CONTROLLABLE_JOINTS = [
 ]
 
 
-class PepperReachEnv(gym.GoalEnv):
+class PepperReachEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
@@ -229,7 +228,7 @@ class PepperReachEnv(gym.GoalEnv):
     def _sample_goal(self):
         return np.append(
             (
-                np.random.sample(2) * [0.2, 0.4] + self._obj_init_pos[:2] - [0.25, 0.25]
+                np.random.sample(2) * [0.2, 0.4] + self._obj_init_pos[:2] - [0.1, 0.2]
             ).astype(np.float32),
             self._obj_init_pos[2],
         )
