@@ -2,39 +2,40 @@
 <robot name="brick">
   <link name="baseLink">
     <contact>
-      <lateral_friction value="1.0"/>
+      <lateral_friction value="0.5"/>
       <rolling_friction value="0.0"/>
+      <spinning_friction value="0.5"/>
       <contact_cfm value="0.0"/>
       <contact_erp value="1.0"/>
     </contact>
-    <!-- <inertial>
-       <pose>0 0 0.045</pose>
-       <mass value="0.1"/>
-       <inertia>
-        <ixx>5.0281895214</ixx>
-        <ixy>-0.000000175</ixy>
-        <ixz>0.3135917393</ixz>
-        <iyx>-0.000000175</iyx>
-        <iyy>0.03965609131</iyy>
-        <iyz>-0.00000551845</iyz>
-        <izx>0.00087805687</izx>
-        <izy>-0.00000551845</izy>
-        <izz>0.04386470215</izz>
-       </inertia>
-    </inertial> -->
+    <inertial>
+       <origin rpy="0 0 0" xyz="0 0 0.038"/>
+       <mass value="0.072"/>
+       <inertia
+        ixx="5.718e-05"
+        ixy="0"
+        ixz="0"
+        iyx="0"
+        iyy="1.343e-04"
+        iyz="0"
+        izx="0"
+        izy="0"
+        izz="1.361e-04"
+       />
+    </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-				<mesh filename="brick.dae" scale="1 1 1"/>
+				<mesh filename="brick.stl" scale="1 1 1"/>
       </geometry>
        <material name="green">
-        <color rgba="0 1 0 1"/>
+        <color rgba="0 0 1 1"/>
       </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-	 	    <mesh filename="brick.dae" scale="1 1 1"/>
+	 	    <mesh filename="brick.stl" scale="1 1 1"/>
       </geometry>
     </collision>
   </link>
