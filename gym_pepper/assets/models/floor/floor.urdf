@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+<robot name="floor">
+  <link name="baseLink">
+    <contact>
+      <lateral_friction value="0.5"/>
+      <rolling_friction value="0.0"/>
+      <spinning_friction value="0.5"/>
+      <contact_cfm value="0.0"/>
+      <contact_erp value="1.0"/>
+    </contact>
+    <inertial>
+       <origin rpy="0 0 0" xyz="0 0 0.038"/>
+       <mass value="0.072"/>
+       <inertia
+        ixx="5.718e-05"
+        ixy="0"
+        ixz="0"
+        iyx="0"
+        iyy="1.343e-04"
+        iyz="0"
+        izx="0"
+        izy="0"
+        izz="1.361e-04"
+       />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+				<mesh filename="floor.obj" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+	 	    <mesh filename="floor.obj" scale="1 1 1"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

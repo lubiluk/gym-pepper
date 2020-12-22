@@ -146,7 +146,7 @@ class PepperReachCamEnv(gym.Env):
         p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
 
         self._robot = self._simulation_manager.spawnPepper(
-            self._client, spawn_ground_plane=True
+            self._client, spawn_ground_plane=False
         )
 
         self._robot.goToPosture("Stand", 1.0)
@@ -161,13 +161,19 @@ class PepperReachCamEnv(gym.Env):
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
-        path = Path(__file__).parent.parent / "assets" / "models"
-        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
-
         self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
         self._obj_init_pos = [0.35, 0, 0.65]
         self._obj_init_ori = [0, 0, 0, 1]
+
+        path = Path(__file__).parent.parent / "assets" / "models"
+        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
+
+        self._obj = p.loadURDF(
+            "floor/floor.urdf",
+            physicsClientId=self._client,
+            useFixedBase=True
+        )
 
         self._table = p.loadURDF(
             "adjustable_table/adjustable_table.urdf",
@@ -180,6 +186,7 @@ class PepperReachCamEnv(gym.Env):
             self._obj_init_pos,
             self._obj_init_ori,
             physicsClientId=self._client,
+            flags=p.URDF_USE_INERTIA_FROM_FILE
         )
 
         # Let things fall down

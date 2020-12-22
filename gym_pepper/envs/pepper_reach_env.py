@@ -150,6 +150,7 @@ class PepperReachEnv(gym.Env):
             self._obj_init_pos,
             self._obj_init_ori,
             physicsClientId=self._client,
+            flags=p.URDF_USE_INERTIA_FROM_FILE
         )
 
         # Let things fall down
