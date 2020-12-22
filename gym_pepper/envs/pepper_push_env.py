@@ -108,6 +108,8 @@ class PepperPushEnv(gym.GoalEnv):
             gui=self._gui, auto_step=False
         )
 
+        p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True
         )

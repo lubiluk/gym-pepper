@@ -113,6 +113,8 @@ class PepperReachEnv(gym.Env):
             gui=self._gui, auto_step=False
         )
 
+        p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+        
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=True
         )
@@ -134,7 +136,7 @@ class PepperReachEnv(gym.Env):
 
         self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
-        self._obj_init_pos = [0.5, 0, 0.75]
+        self._obj_init_pos = [0.35, 0, 0.65]
         self._obj_init_ori = [0, 0, 0, 1]
 
         self._table = p.loadURDF(
