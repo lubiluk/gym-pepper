@@ -47,7 +47,7 @@ class PepperReachCamEnv(gym.Env):
             dict(
                 camera_top=spaces.Box(
                     0,
-                    65_535,
+                    255,
                     shape=obs["camera_top"].shape,
                     dtype=obs["camera_top"].dtype,
                 ),
@@ -59,7 +59,7 @@ class PepperReachCamEnv(gym.Env):
                 ),
                 camera_depth=spaces.Box(
                     0,
-                    255,
+                    65_535,
                     shape=obs["camera_top"].shape,
                     dtype=obs["camera_depth"].dtype,
                 ),
