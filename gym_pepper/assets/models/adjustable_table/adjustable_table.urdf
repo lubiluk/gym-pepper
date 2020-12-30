@@ -7,10 +7,11 @@
       <contact_cfm value="0.0"/>
       <contact_erp value="1.0"/>
     </contact>
-    <!-- <inertial>
-       <pose>0 0 0.045</pose>
-       <mass value="1.5"/>
-    </inertial> -->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+       <mass value="1.0"/>
+       <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
