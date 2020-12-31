@@ -27,12 +27,20 @@ class PepperReachCamEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self, gui=False, sim_steps_per_action=10, max_motion_speed=0.3, dense=True
+        self,
+        gui=False,
+        sim_steps_per_action=10,
+        max_motion_speed=0.3,
+        dense=True,
+        depth_camera=False,
+        top_camera=False,
     ):
         self._sim_steps = sim_steps_per_action
         self._max_speeds = [max_motion_speed] * len(CONTROLLABLE_JOINTS)
         self._gui = gui
         self._dense = dense
+        self._depth_camera = depth_camera
+        self._top_camera = top_camera
 
         self._setup_scene()
 
@@ -43,34 +51,40 @@ class PepperReachCamEnv(gym.Env):
             -2.0857, 2.0857, shape=(len(CONTROLLABLE_JOINTS),), dtype="float32"
         )
 
-        self.observation_space = spaces.Dict(
-            dict(
-                camera_top=spaces.Box(
+        obs_spaces = dict(
+            camera_bottom=spaces.Box(
+                0,
+                255,
+                shape=obs["camera_bottom"].shape,
+                dtype=obs["camera_bottom"].dtype,
+            ),
+            joints_state=spaces.Box(
+                -np.inf,
+                np.inf,
+                shape=obs["joints_state"].shape,
+                dtype=obs["joints_state"].dtype,
+            ),
+        )
+
+        if self._top_camera:
+            obs_spaces["camera_top"] = (
+                spaces.Box(
                     0,
                     255,
                     shape=obs["camera_top"].shape,
                     dtype=obs["camera_top"].dtype,
                 ),
-                camera_bottom=spaces.Box(
-                    0,
-                    255,
-                    shape=obs["camera_top"].shape,
-                    dtype=obs["camera_bottom"].dtype,
-                ),
-                camera_depth=spaces.Box(
-                    0,
-                    65_535,
-                    shape=obs["camera_top"].shape,
-                    dtype=obs["camera_depth"].dtype,
-                ),
-                joints_state=spaces.Box(
-                    -np.inf,
-                    np.inf,
-                    shape=obs["joints_state"].shape,
-                    dtype=obs["joints_state"].dtype,
-                ),
             )
-        )
+
+        if self._depth_camera:
+            obs_spaces["camera_depth"] = spaces.Box(
+                0,
+                65_535,
+                shape=obs["camera_depth"].shape,
+                dtype=obs["camera_depth"].dtype,
+            )
+
+        self.observation_space = spaces.Dict(obs_spaces)
 
     def reset(self):
         self._reset_scene()
@@ -112,9 +126,11 @@ class PepperReachCamEnv(gym.Env):
         pass
 
     def close(self):
-        self._robot.unsubscribeCamera(self._cam_top)
+        if self._top_camera:
+            self._robot.unsubscribeCamera(self._cam_top)
         self._robot.unsubscribeCamera(self._cam_bottom)
-        self._robot.unsubscribeCamera(self._cam_depth)
+        if self._depth_camera:
+            self._robot.unsubscribeCamera(self._cam_depth)
         self._simulation_manager.stopSimulation(self._client)
 
     def seed(self, seed=None):
@@ -143,7 +159,7 @@ class PepperReachCamEnv(gym.Env):
             gui=self._gui, auto_step=False
         )
 
-        p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+        p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 
         self._robot = self._simulation_manager.spawnPepper(
             self._client, spawn_ground_plane=False
@@ -170,9 +186,7 @@ class PepperReachCamEnv(gym.Env):
         p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
 
         self._obj = p.loadURDF(
-            "floor/floor.urdf",
-            physicsClientId=self._client,
-            useFixedBase=True
+            "floor/floor.urdf", physicsClientId=self._client, useFixedBase=True
         )
 
         self._table = p.loadURDF(
@@ -186,7 +200,7 @@ class PepperReachCamEnv(gym.Env):
             self._obj_init_pos,
             self._obj_init_ori,
             physicsClientId=self._client,
-            flags=p.URDF_USE_INERTIA_FROM_FILE
+            flags=p.URDF_USE_INERTIA_FROM_FILE,
         )
 
         # Let things fall down
@@ -202,9 +216,11 @@ class PepperReachCamEnv(gym.Env):
         )[0]
 
         # Setup camera
-        self._cam_top = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_TOP)
+        if self._top_camera:
+            self._cam_top = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_TOP)
         self._cam_bottom = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_BOTTOM)
-        self._cam_depth = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_DEPTH)
+        if self._depth_camera:
+            self._cam_depth = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_DEPTH)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
@@ -256,19 +272,25 @@ class PepperReachCamEnv(gym.Env):
             )
 
     def _get_observation(self):
-        img_top = self._robot.getCameraFrame(self._cam_top)
         img_bottom = self._robot.getCameraFrame(self._cam_bottom)
-        img_depth = self._robot.getCameraFrame(self._cam_depth)
 
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
 
-        return {
-            "camera_top": img_top,
+        result = {
             "camera_bottom": img_bottom,
-            "camera_depth": img_depth,
             "joints_state": np.concatenate([joint_p, joint_v]).astype(np.float32),
         }
+
+        if self._top_camera:
+            img_top = self._robot.getCameraFrame(self._cam_top)
+            result["camera_top"] = img_top
+
+        if self._depth_camera:
+            img_depth = self._robot.getCameraFrame(self._cam_depth)
+            result["camera_depth"] = img_depth
+
+        return result
 
     def _sample_goal(self):
         return np.append(
