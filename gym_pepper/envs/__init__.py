@@ -1,3 +1,4 @@
 from gym_pepper.envs.pepper_push_env import PepperPushEnv
 from gym_pepper.envs.pepper_reach_env import PepperReachEnv
 from gym_pepper.envs.pepper_reach_cam_env import PepperReachCamEnv
+from gym_pepper.envs.pepper_push_cam_env import PepperPushCamEnv

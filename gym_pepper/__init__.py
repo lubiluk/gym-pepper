@@ -14,3 +14,8 @@ register(
     id='PepperReachCam-v0',
     entry_point='gym_pepper.envs:PepperReachCamEnv',
 )
+
+register(
+    id='PepperPushCam-v0',
+    entry_point='gym_pepper.envs:PepperPushCamEnv',
+)
