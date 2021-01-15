@@ -1,9 +1,8 @@
 # Some bits are based on:
 # https://github.com/softbankrobotics-research/qi_gym/blob/master/envs/throwing_env.py
 
-from pathlib import Path
-
 import gym
+import os.path
 import numpy as np
 import pybullet as p
 from gym import error, spaces, utils
@@ -131,8 +130,9 @@ class PepperReachEnv(gym.Env):
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
-        path = Path(__file__).parent.parent / "assets" / "models"
-        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
+        dirname = os.path.dirname(__file__)
+        assets_path = os.path.join(dirname, '../assets/models')
+        p.setAdditionalSearchPath(assets_path, physicsClientId=self._client)
 
         self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]

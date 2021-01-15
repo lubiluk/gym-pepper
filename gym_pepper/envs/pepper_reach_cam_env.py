@@ -1,9 +1,8 @@
 # Some bits are based on:
 # https://github.com/softbankrobotics-research/qi_gym/blob/master/envs/throwing_env.py
 
-from pathlib import Path
-
 import gym
+import os.path
 import numpy as np
 import pybullet as p
 from gym import error, spaces, utils
@@ -79,7 +78,7 @@ class PepperReachCamEnv(gym.Env):
         if self._depth_camera:
             obs_spaces["camera_depth"] = spaces.Box(
                 0,
-                65_535,
+                65535,
                 shape=obs["camera_depth"].shape,
                 dtype=obs["camera_depth"].dtype,
             )
@@ -182,8 +181,9 @@ class PepperReachCamEnv(gym.Env):
         self._obj_init_pos = [0.35, 0, 0.65]
         self._obj_init_ori = [0, 0, 0, 1]
 
-        path = Path(__file__).parent.parent / "assets" / "models"
-        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
+        dirname = os.path.dirname(__file__)
+        assets_path = os.path.join(dirname, '../assets/models')
+        p.setAdditionalSearchPath(assets_path, physicsClientId=self._client)
 
         self._obj = p.loadURDF(
             "floor/floor.urdf", physicsClientId=self._client, useFixedBase=True

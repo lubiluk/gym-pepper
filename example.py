@@ -2,10 +2,10 @@ import gym
 import gym_pepper
 import time
 import numpy as np
-import cv2
+# import cv2
 
 start = time.time()
-env = gym.make("PepperReachCam-v0", gui=False)
+env = gym.make("PepperReachCam-v0", gui=True)
 end = time.time()
 print("=== Make === {}".format(end - start))
 
