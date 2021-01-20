@@ -91,10 +91,15 @@ class PepperReachCamEnv(gym.Env):
         return self._get_observation()
 
     def step(self, action):
+        """
+        Action in terms of desired joint positions. Last number is the speed of the movement.
+        """
         action = list(action)
-        assert len(action) == len(self.action_space.high.tolist())
+        assert len(action) == len(self.action_space.high.tolist()) + 1
 
-        self._robot.setAngles(CONTROLLABLE_JOINTS, action, self._max_speeds)
+        angles = action[:-1]
+        speed = action[-1]
+        self._robot.setAngles(CONTROLLABLE_JOINTS, angles, [speed] * len(angles))
 
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)

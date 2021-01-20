@@ -29,7 +29,9 @@ print("=== Reset === {}".format(end - start))
 
 start = time.time()
 for _ in range(100):
-    o, r, d, i = env.step(np.random.sample(9) * 2 - 1)
+    angles = np.random.sample(9) * 2 - 1
+    speed = np.random.rand(angles + speed)
+    o, r, d, i = env.step(angles + [speed])
     # cv2.imshow("synthetic top camera", o["camera_top"])
     # cv2.imshow("synthetic bottom camera", o["camera_bottom"])
     # cv2.imshow("synthetic depth camera", o["camera_depth"])
