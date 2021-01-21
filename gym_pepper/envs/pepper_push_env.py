@@ -1,11 +1,10 @@
 # Some bits are based on:
 # https://github.com/softbankrobotics-research/qi_gym/blob/master/envs/throwing_env.py
 
-from pathlib import Path
-
 import gym
 import numpy as np
 import pybullet as p
+import os.path
 from gym import error, spaces, utils
 from gym.utils import seeding
 from qibullet import PepperVirtual, SimulationManager
@@ -21,13 +20,24 @@ CONTROLLABLE_JOINTS = [
     "LHand",
 ]
 
+FEATURE_LIMITS = [(-0.5149, 0.5149), (-2.0857, 2.0857), (0.0087, 1.5620),
+                  (-2.0857, 2.0857), (-1.5620, -0.0087), (-1.8239, 1.8239),
+                  (0, 1), (0, 1)]
+
+
+def rescale_feature(index, value):
+    r = FEATURE_LIMITS[index]
+    return (r[1] - r[0]) * (value + 1) / 2 + r[0]
+
 
 class PepperPushEnv(gym.GoalEnv):
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, gui=False, sim_steps_per_action=10, max_motion_speed=0.5):
+    def __init__(self,
+                 gui=False,
+                 sim_steps_per_action=10,
+                 max_motion_speed=0.5):
         self._sim_steps = sim_steps_per_action
-        self._max_speeds = [max_motion_speed] * len(CONTROLLABLE_JOINTS)
         self._gui = gui
 
         self._setup_scene()
@@ -35,22 +45,25 @@ class PepperPushEnv(gym.GoalEnv):
         self._goal = self._sample_goal()
         obs = self._get_observation()
 
-        self.action_space = spaces.Box(
-            -2.0857, 2.0857, shape=(len(CONTROLLABLE_JOINTS),), dtype="float32"
-        )
+        self.action_space = spaces.Box(-1.0,
+                                       1.0,
+                                       shape=(len(CONTROLLABLE_JOINTS) + 1, ),
+                                       dtype="float32")
         self.observation_space = spaces.Dict(
             dict(
-                desired_goal=spaces.Box(
-                    -np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"
-                ),
-                achieved_goal=spaces.Box(
-                    -np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype="float32"
-                ),
-                observation=spaces.Box(
-                    -np.inf, np.inf, shape=obs["observation"].shape, dtype="float32"
-                ),
-            )
-        )
+                desired_goal=spaces.Box(-np.inf,
+                                        np.inf,
+                                        shape=obs["achieved_goal"].shape,
+                                        dtype="float32"),
+                achieved_goal=spaces.Box(-np.inf,
+                                         np.inf,
+                                         shape=obs["achieved_goal"].shape,
+                                         dtype="float32"),
+                observation=spaces.Box(-np.inf,
+                                       np.inf,
+                                       shape=obs["observation"].shape,
+                                       dtype="float32"),
+            ))
 
     def reset(self):
         self._reset_scene()
@@ -65,7 +78,11 @@ class PepperPushEnv(gym.GoalEnv):
         action = list(action)
         assert len(action) == len(self.action_space.high.tolist())
 
-        self._robot.setAngles(CONTROLLABLE_JOINTS, action, self._max_speeds)
+        rescaled = [rescale_feature(i, f) for (i, f) in enumerate(action)]
+        angles = rescaled[:-1]
+        speed = rescaled[-1]
+        self._robot.setAngles(CONTROLLABLE_JOINTS, angles,
+                              [speed] * len(angles))
 
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
@@ -73,7 +90,8 @@ class PepperPushEnv(gym.GoalEnv):
         obs = self._get_observation()
 
         is_success = self._is_success(obs["achieved_goal"], self._goal)
-        is_safety_violated = self._is_table_touched() or self._is_table_displaced()
+        is_safety_violated = self._is_table_touched(
+        ) or self._is_table_displaced()
 
         info = {
             "is_success": is_success,
@@ -93,41 +111,37 @@ class PepperPushEnv(gym.GoalEnv):
         np.random.seed(seed or 0)
 
     def compute_reward(self, achieved_goal, desired_goal, info):
-        return (
-            np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD
-        ).astype(np.float32)
+        return (np.linalg.norm(desired_goal - achieved_goal, axis=-1) <
+                DISTANCE_THRESHOLD).astype(np.float32)
 
     def _is_success(self, achieved_goal, desired_goal):
-        return (
-            np.linalg.norm(desired_goal - achieved_goal, axis=-1) < DISTANCE_THRESHOLD
-        )
+        return (np.linalg.norm(desired_goal - achieved_goal, axis=-1) <
+                DISTANCE_THRESHOLD)
 
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
         self._client = self._simulation_manager.launchSimulation(
-            gui=self._gui, auto_step=False
-        )
+            gui=self._gui, auto_step=False)
 
-        p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+        p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 
         self._robot = self._simulation_manager.spawnPepper(
-            self._client, spawn_ground_plane=True
-        )
+            self._client, spawn_ground_plane=True)
 
         self._robot.goToPosture("Stand", 1.0)
 
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
-        self._robot.setAngles(
-            ["KneePitch", "HipPitch", "LShoulderPitch"], [0.33, -0.9, -0.6], [0.5] * 3
-        )
+        self._robot.setAngles(["KneePitch", "HipPitch", "LShoulderPitch"],
+                              [0.33, -0.9, -0.6], [0.5] * 3)
 
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
-        path = Path(__file__).parent.parent / "assets" / "models"
-        p.setAdditionalSearchPath(str(path), physicsClientId=self._client)
+        dirname = os.path.dirname(__file__)
+        assets_path = os.path.join(dirname, '../assets/models')
+        p.setAdditionalSearchPath(assets_path, physicsClientId=self._client)
 
         self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
@@ -139,26 +153,23 @@ class PepperPushEnv(gym.GoalEnv):
             self._table_init_pos,
             self._table_init_ori,
             physicsClientId=self._client,
+            useFixedBase=True
         )
-        self._obj = p.loadURDF(
-            "brick/brick.urdf",
-            self._obj_init_pos,
-            self._obj_init_ori,
-            physicsClientId=self._client,
-            flags=p.URDF_USE_INERTIA_FROM_FILE
-        )
+        self._obj = p.loadURDF("brick/brick.urdf",
+                               self._obj_init_pos,
+                               self._obj_init_ori,
+                               physicsClientId=self._client,
+                               flags=p.URDF_USE_INERTIA_FROM_FILE)
 
         # Let things fall down
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
         self.joints_initial_pose = self._robot.getAnglesPosition(
-            self._robot.joint_dict.keys()
-        )
+            self._robot.joint_dict.keys())
 
         self._obj_start_pos = p.getBasePositionAndOrientation(
-            self._obj, physicsClientId=self._client
-        )[0]
+            self._obj, physicsClientId=self._client)[0]
 
         if self._gui:
             # load ghosts
@@ -202,9 +213,8 @@ class PepperPushEnv(gym.GoalEnv):
         return self._get_observation()
 
     def _reset_joint_state(self):
-        for joint, position in zip(
-            self._robot.joint_dict.keys(), self.joints_initial_pose
-        ):
+        for joint, position in zip(self._robot.joint_dict.keys(),
+                                   self.joints_initial_pose):
             p.setJointMotorControl2(
                 self._robot.robot_model,
                 self._robot.joint_dict[joint].getIndex(),
@@ -221,39 +231,39 @@ class PepperPushEnv(gym.GoalEnv):
 
     def _get_observation(self):
         obj_pos = p.getBasePositionAndOrientation(
-            self._obj, physicsClientId=self._client
-        )[0]
+            self._obj, physicsClientId=self._client)[0]
         obj_vel = p.getBaseVelocity(self._obj, physicsClientId=self._client)[0]
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         hand_idx = self._robot.link_dict["l_hand"].getIndex()
-        hand_pos = p.getLinkState(
-            self._robot.getRobotModel(), hand_idx, physicsClientId=self._client
-        )[0]
+        hand_pos = p.getLinkState(self._robot.getRobotModel(),
+                                  hand_idx,
+                                  physicsClientId=self._client)[0]
         obj_rel_pos = np.array(obj_pos) - np.array(hand_pos)
 
         return {
-            "observation": np.concatenate(
-                [obj_pos, obj_vel, joint_p, joint_v, obj_rel_pos]
-            ).astype(np.float32),
-            "achieved_goal": np.array(obj_pos, dtype=np.float32),
-            "desired_goal": self._goal,
+            "observation":
+            np.concatenate([obj_pos, obj_vel, joint_p, joint_v,
+                            obj_rel_pos]).astype(np.float32),
+            "achieved_goal":
+            np.array(obj_pos, dtype=np.float32),
+            "desired_goal":
+            self._goal,
         }
 
     def _sample_goal(self):
         return np.append(
-            (
-                np.random.sample(2) * [0.2, 0.4] + self._obj_start_pos[:2] - [0.1, 0.2]
-            ).astype(np.float32),
+            (np.random.sample(2) * [0.2, 0.4] + self._obj_start_pos[:2] -
+             [0.1, 0.2]).astype(np.float32),
             self._obj_start_pos[2],
         )
 
     def _is_table_displaced(self):
-        pose = p.getBasePositionAndOrientation(
-            self._table, physicsClientId=self._client
-        )
+        pose = p.getBasePositionAndOrientation(self._table,
+                                               physicsClientId=self._client)
         current_pose = np.array([e for t in pose for e in t], dtype=np.float32)
-        desired_pose = np.concatenate([self._table_init_pos, self._table_init_ori])
+        desired_pose = np.concatenate(
+            [self._table_init_pos, self._table_init_ori])
 
         return not np.allclose(desired_pose, current_pose, atol=0.01)
 
