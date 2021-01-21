@@ -22,8 +22,8 @@ CONTROLLABLE_JOINTS = [
 ]
 
 FEATURE_LIMITS = [(-0.5149, 0.5149), (-2.0857, 2.0857), (-0.7068, 0.4451),
-                (-2.0857, 2.0857), (0.0087, 1.5620), (-2.0857, 2.0857),
-                (-1.5620, -0.0087), (-1.8239, 1.8239), (0, 1), (0, 1)]
+                  (-2.0857, 2.0857), (0.0087, 1.5620), (-2.0857, 2.0857),
+                  (-1.5620, -0.0087), (-1.8239, 1.8239), (0, 1), (0, 1)]
 
 
 def rescale_feature(index, value):
@@ -44,7 +44,6 @@ class PepperReachCamEnv(gym.Env):
         top_camera=False,
     ):
         self._sim_steps = sim_steps_per_action
-        self._max_speeds = [max_motion_speed] * len(CONTROLLABLE_JOINTS)
         self._gui = gui
         self._dense = dense
         self._depth_camera = depth_camera
@@ -55,8 +54,8 @@ class PepperReachCamEnv(gym.Env):
         self._goal = self._sample_goal()
         obs = self._get_observation()
 
-        self.action_space = spaces.Box(-1,
-                                       1,
+        self.action_space = spaces.Box(-1.0,
+                                       1.0,
                                        shape=(len(CONTROLLABLE_JOINTS) + 1, ),
                                        dtype="float32")
 
@@ -108,7 +107,8 @@ class PepperReachCamEnv(gym.Env):
         rescaled = [rescale_feature(i, f) for (i, f) in enumerate(action)]
         angles = rescaled[:-1]
         speed = rescaled[-1]
-        self._robot.setAngles(CONTROLLABLE_JOINTS, angles, [0.3] * len(angles))
+        self._robot.setAngles(CONTROLLABLE_JOINTS, angles,
+                              [speed] * len(angles))
 
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
