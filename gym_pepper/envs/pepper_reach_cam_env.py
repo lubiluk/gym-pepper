@@ -38,7 +38,6 @@ class PepperReachCamEnv(gym.Env):
         self,
         gui=False,
         sim_steps_per_action=10,
-        max_motion_speed=0.3,
         dense=True,
         depth_camera=False,
         top_camera=False,
