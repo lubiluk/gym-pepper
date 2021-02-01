@@ -165,7 +165,7 @@ class PepperPushCamEnv(gym.GoalEnv):
     def _setup_scene(self):
         self._simulation_manager = SimulationManager()
         self._client = self._simulation_manager.launchSimulation(
-            gui=self._gui, auto_step=False)
+            gui=self._gui, auto_step=False, use_shared_memory=True)
 
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 
