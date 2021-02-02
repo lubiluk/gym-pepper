@@ -198,7 +198,7 @@ class PepperReachCamEnv(gym.Env):
         assets_path = os.path.join(dirname, '../assets/models')
         p.setAdditionalSearchPath(assets_path, physicsClientId=self._client)
 
-        self._obj = p.loadURDF("floor/floor.urdf",
+        self._floor = p.loadURDF("floor/floor.urdf",
                                physicsClientId=self._client,
                                useFixedBase=True)
 
