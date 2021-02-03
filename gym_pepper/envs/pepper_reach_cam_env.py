@@ -291,7 +291,7 @@ class PepperReachCamEnv(gym.Env):
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
 
         result = {
-            "camera_bottom": img_bottom,
+            "camera_bottom": img_bottom.transpose(2, 0, 1),
             # "joints_state": np.concatenate([joint_p, joint_v]).astype(np.float32),
             "joints_state": np.array(joint_p, dtype=np.float32)
         }
