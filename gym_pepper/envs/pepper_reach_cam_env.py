@@ -7,7 +7,7 @@ import numpy as np
 import pybullet as p
 from gym import error, spaces, utils
 from gym.utils import seeding
-from qibullet import PepperVirtual, SimulationManager
+from qibullet import PepperVirtual, SimulationManager, Camera
 
 CONTROLLABLE_JOINTS = [
     "HipRoll",
@@ -229,12 +229,12 @@ class PepperReachCamEnv(gym.Env):
         # Setup camera
         if self._top_camera:
             self._cam_top = self._robot.subscribeCamera(
-                PepperVirtual.ID_CAMERA_TOP)
+                PepperVirtual.ID_CAMERA_TOP, resolution=Camera.K_QQVGA)
         self._cam_bottom = self._robot.subscribeCamera(
-            PepperVirtual.ID_CAMERA_BOTTOM)
+            PepperVirtual.ID_CAMERA_BOTTOM, resolution=Camera.K_QQVGA)
         if self._depth_camera:
             self._cam_depth = self._robot.subscribeCamera(
-                PepperVirtual.ID_CAMERA_DEPTH)
+                PepperVirtual.ID_CAMERA_DEPTH, resolution=Camera.K_QQVGA)
 
     def _reset_scene(self):
         p.resetBasePositionAndOrientation(
@@ -291,7 +291,7 @@ class PepperReachCamEnv(gym.Env):
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
 
         result = {
-            "camera_bottom": img_bottom.transpose(2, 0, 1),
+            "camera_bottom": img_bottom,
             # "joints_state": np.concatenate([joint_p, joint_v]).astype(np.float32),
             "joints_state": np.array(joint_p, dtype=np.float32)
         }
