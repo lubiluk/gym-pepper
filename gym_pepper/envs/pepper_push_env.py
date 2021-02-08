@@ -65,6 +65,9 @@ class PepperPushEnv(gym.GoalEnv):
                                        dtype="float32"),
             ))
 
+    def __del__(self):
+        self.close()
+
     def reset(self):
         self._reset_scene()
         self._goal = self._sample_goal()

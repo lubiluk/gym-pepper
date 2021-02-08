@@ -91,6 +91,9 @@ class PepperReachCamEnv(gym.Env):
 
         self.observation_space = spaces.Dict(obs_spaces)
 
+    def __del__(self):
+        self.close()
+
     def reset(self):
         self._reset_scene()
 

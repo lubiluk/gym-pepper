@@ -3,20 +3,11 @@ import gym_pepper
 import time
 import numpy as np
 # import cv2
-from signal import *
-import sys
 
 start = time.time()
 env = gym.make("PepperReach-v0", gui=True)
 end = time.time()
 print("=== Make === {}".format(end - start))
-
-def clean(*args):
-        env.close()
-        sys.exit(0)
-
-for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
-    signal(sig, clean)
 
 start = time.time()
 env.reset()

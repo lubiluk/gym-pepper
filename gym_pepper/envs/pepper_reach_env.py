@@ -55,6 +55,9 @@ class PepperReachEnv(gym.Env):
                                             shape=obs.shape,
                                             dtype="float32")
 
+    def __del__(self):
+        self.close()
+
     def reset(self):
         self._reset_scene()
 
