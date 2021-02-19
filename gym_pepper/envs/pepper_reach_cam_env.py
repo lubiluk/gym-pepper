@@ -10,9 +10,9 @@ from gym.utils import seeding
 from qibullet import PepperVirtual, SimulationManager, Camera
 
 CONTROLLABLE_JOINTS = [
-    "HipRoll",
     "HeadYaw",
     "HeadPitch",
+    "HipRoll",
     "LShoulderPitch",
     "LShoulderRoll",
     "LElbowYaw",
@@ -21,7 +21,7 @@ CONTROLLABLE_JOINTS = [
     "LHand",
 ]
 
-FEATURE_LIMITS = [(-0.5149, 0.5149), (-2.0857, 2.0857), (-0.7068, 0.4451),
+FEATURE_LIMITS = [(-2.0857, 2.0857), (-0.7068, 0.4451), (-0.5149, 0.5149),
                   (-2.0857, 2.0857), (0.0087, 1.5620), (-2.0857, 2.0857),
                   (-1.5620, -0.0087), (-1.8239, 1.8239), (0, 1), (0, 1)]
 
@@ -41,12 +41,19 @@ class PepperReachCamEnv(gym.Env):
         dense=True,
         depth_camera=False,
         top_camera=False,
+        no_head_movement=False,
     ):
         self._sim_steps = sim_steps_per_action
         self._gui = gui
         self._dense = dense
         self._depth_camera = depth_camera
         self._top_camera = top_camera
+
+        if no_head_movement:
+            del CONTROLLABLE_JOINTS[0]
+            del CONTROLLABLE_JOINTS[1]
+            del FEATURE_LIMITS[0]
+            del FEATURE_LIMITS[1]
 
         self._setup_scene()
 
