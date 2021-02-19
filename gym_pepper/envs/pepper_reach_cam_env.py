@@ -131,6 +131,9 @@ class PepperReachCamEnv(gym.Env):
 
         info = {
             "is_success": is_success,
+            "object_position": obj_pos,
+            "hand_position": hand_pos,
+            "is_safety_violated": is_safety_violated
         }
         reward = self.compute_reward(is_success, obj_pos, hand_pos,
                                      is_safety_violated)
