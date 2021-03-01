@@ -41,17 +41,13 @@ class PepperReachEnv(gym.Env):
         self._setup_scene()
 
         self._goal = self._sample_goal()
-        obs = self._get_observation()
 
         self.action_space = spaces.Box(-1.0,
                                        1.0,
                                        shape=(len(CONTROLLABLE_JOINTS) + 1, ),
                                        dtype="float32")
 
-        self.observation_space = spaces.Box(-np.inf,
-                                            np.inf,
-                                            shape=obs.shape,
-                                            dtype="float32")
+        self.observation_space = self._get_observation_space()
 
     def __del__(self):
         self.close()
@@ -85,6 +81,7 @@ class PepperReachEnv(gym.Env):
 
         info = {
             "is_success": is_success,
+            "is_safety_violated": is_safety_violated
         }
         reward = self._compute_reward(is_success, is_safety_violated)
         done = is_success or is_safety_violated
@@ -125,7 +122,7 @@ class PepperReachEnv(gym.Env):
         p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
 
         self._robot = self._simulation_manager.spawnPepper(
-            self._client, spawn_ground_plane=True)
+            self._client, spawn_ground_plane=False)
 
         self._robot.goToPosture("Stand", 1.0)
 
@@ -147,17 +144,23 @@ class PepperReachEnv(gym.Env):
         assets_path = os.path.join(dirname, '../assets/models')
         p.setAdditionalSearchPath(assets_path, physicsClientId=self._client)
 
+        self._floor = p.loadURDF("floor/floor.urdf",
+                                 physicsClientId=self._client,
+                                 useFixedBase=True)
+
         self._table = p.loadURDF(
             "adjustable_table/adjustable_table.urdf",
             self._table_init_pos,
             self._table_init_ori,
             physicsClientId=self._client,
         )
-        self._obj = p.loadURDF("brick/brick.urdf",
-                               self._obj_init_pos,
-                               self._obj_init_ori,
-                               physicsClientId=self._client,
-                               flags=p.URDF_USE_INERTIA_FROM_FILE)
+        self._obj = p.loadURDF(
+            "brick/brick.urdf",
+            self._obj_init_pos,
+            self._obj_init_ori,
+            physicsClientId=self._client,
+            flags=p.URDF_USE_INERTIA_FROM_FILE,
+        )
 
         # Let things fall down
         for _ in range(500):
@@ -217,10 +220,16 @@ class PepperReachEnv(gym.Env):
                 physicsClientId=self._client,
             )
 
+    def _get_observation_space(self):
+        obs = self._get_observation()
+
+        return spaces.Box(-np.inf, np.inf, shape=obs.shape, dtype="float32")
+
     def _get_observation(self):
         goal_pos = self._goal
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
-        joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        # joint velocities are not available on real Pepper
+        # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
         )
         cam_pos = p.getLinkState(self._robot.getRobotModel(),
@@ -229,8 +238,7 @@ class PepperReachEnv(gym.Env):
         # Object position relative to camera
         obj_rel_pos = np.array(goal_pos) - np.array(cam_pos)
 
-        return np.concatenate([joint_p, joint_v,
-                               obj_rel_pos]).astype(np.float32)
+        return np.concatenate([joint_p, obj_rel_pos]).astype(np.float32)
 
     def _sample_goal(self):
         return np.append(
