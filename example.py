@@ -5,7 +5,7 @@ import numpy as np
 # import cv2
 
 start = time.time()
-env = gym.make("PepperReachCam-v0", gui=False, no_head_movement=True)
+env = gym.make("PepperReach-v0", gui=True)
 end = time.time()
 print("=== Make === {}".format(end - start))
 
@@ -29,7 +29,7 @@ print("=== Reset === {}".format(end - start))
 
 start = time.time()
 for _ in range(1000):
-    action = np.random.sample(8) * 2 - 1
+    action = np.random.sample(10) * 2 - 1
     o, r, d, i = env.step(action)
     # cv2.imshow("synthetic bottom camera", o["observation"]["camera_bottom"])
     # cv2.waitKey(1)

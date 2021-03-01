@@ -5,11 +5,12 @@ import gym
 import os.path
 import numpy as np
 import pybullet as p
-from gym import error, spaces, utils
-from gym.utils import seeding
-from qibullet import PepperVirtual, SimulationManager
+from gym import spaces
+from qibullet import SimulationManager
 
 CONTROLLABLE_JOINTS = [
+    "HeadYaw",
+    "HeadPitch",
     "HipRoll",
     "LShoulderPitch",
     "LShoulderRoll",
@@ -19,9 +20,9 @@ CONTROLLABLE_JOINTS = [
     "LHand",
 ]
 
-FEATURE_LIMITS = [(-0.5149, 0.5149), (-2.0857, 2.0857), (0.0087, 1.5620),
-                  (-2.0857, 2.0857), (-1.5620, -0.0087), (-1.8239, 1.8239),
-                  (0, 1), (0, 1)]
+FEATURE_LIMITS = [(-2.0857, 2.0857), (-0.7068, 0.4451), (-0.5149, 0.5149),
+                  (-2.0857, 2.0857), (0.0087, 1.5620), (-2.0857, 2.0857),
+                  (-1.5620, -0.0087), (-1.8239, 1.8239), (0, 1), (0, 1)]
 
 
 def rescale_feature(index, value):
@@ -32,10 +33,7 @@ def rescale_feature(index, value):
 class PepperReachEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self,
-                 gui=False,
-                 sim_steps_per_action=10,
-                 dense=False):
+    def __init__(self, gui=False, sim_steps_per_action=10, dense=False):
         self._sim_steps = sim_steps_per_action
         self._gui = gui
         self._dense = dense
@@ -82,22 +80,13 @@ class PepperReachEnv(gym.Env):
         obs = self._get_observation()
 
         is_success = self._is_success()
-        hand_idx = self._robot.link_dict["l_hand"].getIndex()
-        hand_pos = np.array(
-            p.getLinkState(self._robot.getRobotModel(),
-                           hand_idx,
-                           physicsClientId=self._client)[0])
-        obj_pos = np.array(
-            p.getBasePositionAndOrientation(self._obj,
-                                            physicsClientId=self._client)[0])
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
 
         info = {
             "is_success": is_success,
         }
-        reward = self.compute_reward(is_success, obj_pos, hand_pos,
-                                     is_safety_violated)
+        reward = self._compute_reward(is_success, is_safety_violated)
         done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
@@ -111,17 +100,15 @@ class PepperReachEnv(gym.Env):
     def seed(self, seed=None):
         np.random.seed(seed or 0)
 
-    def compute_reward(self, is_success, obj_pos, hand_pos,
-                       is_safety_violated):
+    def _compute_reward(self, is_success, is_safety_violated):
         if is_success:
-            return 10.0 if self._dense else 1.0
+            return 1.0
+
+        if is_safety_violated:
+            return -1.0
 
         if self._dense:
-            if is_safety_violated:
-                return -10.0
-
-            return -np.linalg.norm(obj_pos - hand_pos, axis=-1).astype(
-                np.float32)
+            return -0.01
 
         return 0.0
 
@@ -234,13 +221,15 @@ class PepperReachEnv(gym.Env):
         goal_pos = self._goal
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
-        hand_idx = self._robot.link_dict["l_hand"].getIndex()
-        hand_pos = p.getLinkState(self._robot.getRobotModel(),
-                                  hand_idx,
-                                  physicsClientId=self._client)[0]
-        obj_rel_pos = np.array(goal_pos) - np.array(hand_pos)
+        cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
+        )
+        cam_pos = p.getLinkState(self._robot.getRobotModel(),
+                                 cam_idx,
+                                 physicsClientId=self._client)[0]
+        # Object position relative to camera
+        obj_rel_pos = np.array(goal_pos) - np.array(cam_pos)
 
-        return np.concatenate([goal_pos, joint_p, joint_v,
+        return np.concatenate([joint_p, joint_v,
                                obj_rel_pos]).astype(np.float32)
 
     def _sample_goal(self):
