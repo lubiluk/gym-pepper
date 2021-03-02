@@ -61,17 +61,7 @@ class PepperReachEnv(gym.Env):
         """
         Action in terms of desired joint positions. Last number is the speed of the movement.
         """
-        action = list(action)
-        assert len(action) == len(self.action_space.high.tolist())
-
-        rescaled = [rescale_feature(i, f) for (i, f) in enumerate(action)]
-        angles = rescaled[:-1]
-        speed = rescaled[-1]
-        self._robot.setAngles(CONTROLLABLE_JOINTS, angles,
-                              [speed] * len(angles))
-
-        for _ in range(self._sim_steps):
-            p.stepSimulation(physicsClientId=self._client)
+        self._perform_action(action)
 
         obs = self._get_observation()
 
@@ -96,6 +86,19 @@ class PepperReachEnv(gym.Env):
 
     def seed(self, seed=None):
         np.random.seed(seed or 0)
+
+    def _perform_action(self, action):
+        action = list(action)
+        assert len(action) == len(self.action_space.high.tolist())
+
+        rescaled = [rescale_feature(i, f) for (i, f) in enumerate(action)]
+        angles = rescaled[:-1]
+        speed = rescaled[-1]
+        self._robot.setAngles(CONTROLLABLE_JOINTS, angles,
+                              [speed] * len(angles))
+
+        for _ in range(self._sim_steps):
+            p.stepSimulation(physicsClientId=self._client)
 
     def _compute_reward(self, is_success, is_safety_violated):
         if is_success:
@@ -230,15 +233,18 @@ class PepperReachEnv(gym.Env):
         joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
-        cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
-        )
-        cam_pos = p.getLinkState(self._robot.getRobotModel(),
-                                 cam_idx,
-                                 physicsClientId=self._client)[0]
+        cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
         # Object position relative to camera
-        obj_rel_pos = np.array(goal_pos) - np.array(cam_pos)
+        obj_rel_pos = np.array(goal_pos) - np.array(cam_pos[0])
 
-        return np.concatenate([joint_p, obj_rel_pos]).astype(np.float32)
+        v, _ = p.multiplyTransforms(cam_pos[0], cam_pos[1], (0,0,1), (0,0,0,1))
+        hit_id = p.rayTest(cam_pos[0], v)[0][0]
+
+        if hit_id != self._table:
+            obj_rel_pos = np.array((0.0, 0.0, 0.0), dtype=np.float32)
+
+        return np.concatenate([joint_p, cam_pos[0], cam_pos[1],
+                               obj_rel_pos]).astype(np.float32)
 
     def _sample_goal(self):
         return np.append(

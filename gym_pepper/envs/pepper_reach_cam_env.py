@@ -15,6 +15,29 @@ class PepperReachCamEnv(PepperReachEnv):
         self._robot.unsubscribeCamera(self._cam)
         super(PepperReachCamEnv, self).close()
 
+    def step(self, action):
+        """
+        Action in terms of desired joint positions. Last number is the speed of the movement.
+        """
+        self._perform_action(action)
+
+        obs = self._get_observation()
+
+        is_success = self._is_success()
+        is_safety_violated = self._is_table_touched(
+        ) or self._is_table_displaced()
+        obj_pos = self._get_object_pos()
+
+        info = {
+            "is_success": is_success,
+            "is_safety_violated": is_safety_violated,
+            "object_position": obj_pos
+        }
+        reward = self._compute_reward(is_success, is_safety_violated)
+        done = is_success or is_safety_violated
+
+        return (obs, reward, done, info)
+
     def _setup_scene(self):
         super(PepperReachCamEnv, self)._setup_scene()
 
@@ -54,3 +77,13 @@ class PepperReachCamEnv(PepperReachEnv):
         }
 
         return result
+
+    def _get_object_pos(self):
+        goal_pos = self._goal
+        cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
+        )
+        cam_pos = p.getLinkState(self._robot.getRobotModel(),
+                                 cam_idx,
+                                 physicsClientId=self._client)[0]
+        # Object position relative to camera
+        return np.array(goal_pos) - np.array(cam_pos)
