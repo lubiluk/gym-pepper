@@ -5,7 +5,8 @@ import gym
 import os.path
 import numpy as np
 import pybullet as p
-from .pepper_reach_env import PepperReachEnv, CONTROLLABLE_JOINTS
+from .pepper_reach_env import PepperReachEnv
+from .pepper_env import CONTROLLABLE_JOINTS
 from gym import spaces
 from qibullet import PepperVirtual, Camera
 

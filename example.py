@@ -5,7 +5,7 @@ import numpy as np
 # import cv2
 
 start = time.time()
-env = gym.make("PepperReach-v0", gui=True)
+env = gym.make("PepperPush-v0", gui=True)
 end = time.time()
 print("=== Make === {}".format(end - start))
 
