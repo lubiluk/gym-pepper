@@ -12,7 +12,8 @@ class PepperReachEnv(PepperEnv):
                              sim_steps_per_action=sim_steps_per_action)
 
     def reset(self):
-        self._reset_scene()
+        obj_pos = self._reset_scene()
+        self._goal = obj_pos
 
         return self._get_observation()
 

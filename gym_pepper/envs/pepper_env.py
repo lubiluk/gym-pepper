@@ -175,7 +175,7 @@ class PepperEnv(gym.Env):
         for _ in range(self._sim_steps):
             p.stepSimulation(physicsClientId=self._client)
 
-        return self._get_observation()
+        return obj_pos
 
     def _reset_joint_state(self):
         for joint, position in zip(self._robot.joint_dict.keys(),
