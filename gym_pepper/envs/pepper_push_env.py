@@ -99,7 +99,7 @@ class PepperPushEnv(PepperEnv):
                                     (0, 0, 0, 1))
         hit_id = p.rayTest(cam_pos[0], v)[0][0]
 
-        if hit_id != self._table:
+        if (hit_id != self._table) and (hit_id != self._obj):
             obj_rel_pos = np.array((0.0, 0.0, 0.0), dtype=np.float32)
 
         return {
