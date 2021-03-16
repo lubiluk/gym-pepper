@@ -6,7 +6,7 @@ import numpy as np
 import pybullet as p
 import os.path
 from gym import spaces
-from .pepper_env import PepperEnv, CONTROLLABLE_JOINTS
+from .pepper_env import PepperEnv
 
 DISTANCE_THRESHOLD = 0.04
 
@@ -88,7 +88,7 @@ class PepperPushEnv(PepperEnv):
         obj_pos = p.getBasePositionAndOrientation(
             self._obj, physicsClientId=self._client)[0]
         obj_vel = p.getBaseVelocity(self._obj, physicsClientId=self._client)[0]
-        joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
+        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")

@@ -6,7 +6,6 @@ import os.path
 import numpy as np
 import pybullet as p
 from .pepper_reach_env import PepperReachEnv
-from .pepper_env import CONTROLLABLE_JOINTS
 from gym import spaces
 from qibullet import PepperVirtual, Camera
 
@@ -68,7 +67,7 @@ class PepperReachCamEnv(PepperReachEnv):
     def _get_observation(self):
         img = self._robot.getCameraFrame(self._cam)
 
-        joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
+        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
 

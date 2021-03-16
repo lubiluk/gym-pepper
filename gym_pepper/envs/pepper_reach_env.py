@@ -1,15 +1,20 @@
-from .pepper_env import PepperEnv, CONTROLLABLE_JOINTS
+from .pepper_env import PepperEnv
 import pybullet as p
 import numpy as np
 from gym import spaces
 
 
 class PepperReachEnv(PepperEnv):
-    def __init__(self, gui=False, sim_steps_per_action=10, dense=False):
+    def __init__(self,
+                 gui=False,
+                 sim_steps_per_action=10,
+                 dense=False,
+                 head_motion=True):
         self._dense = dense
         super(PepperReachEnv,
               self).__init__(gui=gui,
-                             sim_steps_per_action=sim_steps_per_action)
+                             sim_steps_per_action=sim_steps_per_action,
+                             head_motion=head_motion)
 
     def reset(self):
         obj_pos = self._reset_scene()
@@ -19,7 +24,8 @@ class PepperReachEnv(PepperEnv):
 
     def step(self, action):
         """
-        Action in terms of desired joint positions. Last number is the speed of the movement.
+        Action in terms of desired joint positions.
+        The last number is the speed of the movement.
         """
         self._perform_action(action)
 
@@ -62,7 +68,7 @@ class PepperReachEnv(PepperEnv):
 
     def _get_observation(self):
         goal_pos = self._goal
-        joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
+        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")

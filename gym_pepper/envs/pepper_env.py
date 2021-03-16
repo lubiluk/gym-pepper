@@ -8,41 +8,36 @@ import pybullet as p
 from gym import spaces
 from qibullet import SimulationManager
 
-CONTROLLABLE_JOINTS = [
-    "HeadYaw",
-    "HeadPitch",
-    "HipRoll",
-    "LShoulderPitch",
-    "LShoulderRoll",
-    "LElbowYaw",
-    "LElbowRoll",
-    "LWristYaw",
-    "LHand",
-]
-
-FEATURE_LIMITS = [
-    (-2.0857, 2.0857),
-    (-0.7068, 0.4451),
-    (-0.5149, 0.5149),
-    (-2.0857, 2.0857),
-    (0.0087, 1.5620),
-    (-2.0857, 2.0857),
-    (-1.5620, -0.0087),
-    (-1.8239, 1.8239),
-    (0, 1),
-    (0, 1),
-]
-
-
-def rescale_feature(index, value):
-    r = FEATURE_LIMITS[index]
-    return (r[1] - r[0]) * (value + 1) / 2 + r[0]
-
 
 class PepperEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, gui=False, sim_steps_per_action=10):
+    CONTROLLABLE_JOINTS = [
+        "HeadYaw",
+        "HeadPitch",
+        "HipRoll",
+        "LShoulderPitch",
+        "LShoulderRoll",
+        "LElbowYaw",
+        "LElbowRoll",
+        "LWristYaw",
+        "LHand",
+    ]
+
+    FEATURE_LIMITS = [
+        (-2.0857, 2.0857),
+        (-0.7068, 0.4451),
+        (-0.5149, 0.5149),
+        (-2.0857, 2.0857),
+        (0.0087, 1.5620),
+        (-2.0857, 2.0857),
+        (-1.5620, -0.0087),
+        (-1.8239, 1.8239),
+        (0, 1),
+        (0, 1),
+    ]
+
+    def __init__(self, gui=False, sim_steps_per_action=10, head_motion=True):
         self._sim_steps = sim_steps_per_action
         self._gui = gui
 
@@ -50,9 +45,14 @@ class PepperEnv(gym.Env):
 
         self._goal = self._sample_goal()
 
+        if not head_motion:
+            self.CONTROLLABLE_JOINTS = self.CONTROLLABLE_JOINTS[3:]
+            self.FEATURE_LIMITS = self.FEATURE_LIMITS[3:]
+
         self.action_space = spaces.Box(-1.0,
                                        1.0,
-                                       shape=(len(CONTROLLABLE_JOINTS) + 1, ),
+                                       shape=(len(self.CONTROLLABLE_JOINTS) +
+                                              1, ),
                                        dtype="float32")
 
         self.observation_space = self._get_observation_space()
@@ -79,10 +79,12 @@ class PepperEnv(gym.Env):
         action = list(action)
         assert len(action) == len(self.action_space.high.tolist())
 
-        rescaled = [rescale_feature(i, f) for (i, f) in enumerate(action)]
+        rescaled = [
+            self._rescale_feature(i, f) for (i, f) in enumerate(action)
+        ]
         angles = rescaled[:-1]
         speed = rescaled[-1]
-        self._robot.setAngles(CONTROLLABLE_JOINTS, angles,
+        self._robot.setAngles(self.CONTROLLABLE_JOINTS, angles,
                               [speed] * len(angles))
 
         for _ in range(self._sim_steps):
@@ -103,8 +105,8 @@ class PepperEnv(gym.Env):
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
 
-        self._robot.setAngles(["KneePitch", "HipPitch", "LShoulderPitch"],
-                              [0.33, -0.9, -0.6], [0.5] * 3)
+        self._robot.setAngles(["KneePitch", "HipPitch", "LShoulderPitch", "HeadPitch"],
+                              [0.33, -0.9, -0.6, 0.3], [0.5] * 4)
 
         for _ in range(500):
             p.stepSimulation(physicsClientId=self._client)
@@ -220,3 +222,7 @@ class PepperEnv(gym.Env):
         cont = p.getContactPoints(self._robot.getRobotModel(), self._table)
 
         return len(cont) > 0
+
+    def _rescale_feature(self, index, value):
+        r = self.FEATURE_LIMITS[index]
+        return (r[1] - r[0]) * (value + 1) / 2 + r[0]
