@@ -113,7 +113,7 @@ class PepperEnv(gym.Env):
 
         self._table_init_pos = [0.35, 0, 0]
         self._table_init_ori = [0, 0, 0, 1]
-        self._obj_init_pos = [0.35, 0, 0.72]
+        self._obj_init_pos = [0.35, 0, 0.71]
         self._obj_init_ori = [0, 0, 0, 1]
 
         dirname = os.path.dirname(__file__)

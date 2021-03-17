@@ -87,7 +87,6 @@ class PepperPushEnv(PepperEnv):
     def _get_observation(self):
         obj_pos = p.getBasePositionAndOrientation(
             self._obj, physicsClientId=self._client)[0]
-        obj_vel = p.getBaseVelocity(self._obj, physicsClientId=self._client)[0]
         joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
@@ -104,9 +103,8 @@ class PepperPushEnv(PepperEnv):
 
         return {
             "observation":
-            np.concatenate([
-                obj_pos, obj_vel, joint_p, cam_pos[0], cam_pos[1], obj_rel_pos
-            ]).astype(np.float32),
+            np.concatenate([joint_p, cam_pos[0], cam_pos[1],
+                            obj_rel_pos]).astype(np.float32),
             "achieved_goal":
             np.array(obj_pos, dtype=np.float32),
             "desired_goal":
