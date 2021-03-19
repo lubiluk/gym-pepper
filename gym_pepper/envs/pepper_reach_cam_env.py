@@ -70,10 +70,12 @@ class PepperReachCamEnv(PepperReachEnv):
         joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
 
         result = {
             "camera": img,
-            "joints_state": np.array(joint_p, dtype=np.float32)
+            "joints_state": np.array(joint_p, dtype=np.float32),
+            "camera_pose": np.concatenate([cam_pos[0], cam_pos[1]]).astype(np.float32)
         }
 
         return result
