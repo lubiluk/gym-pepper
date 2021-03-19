@@ -31,7 +31,7 @@ class PepperPushEnv(PepperEnv):
 
         obs = self._get_observation()
 
-        is_success = self._is_success(obs["achieved_goal"], self._goal)
+        is_success = self._is_success(obs["achieved_goal"], self._goal[:2])
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
 
@@ -39,7 +39,7 @@ class PepperPushEnv(PepperEnv):
             "is_success": is_success,
             "is_safety_violated": is_safety_violated
         }
-        reward = self.compute_reward(obs["achieved_goal"], self._goal, info)
+        reward = self.compute_reward(obs["achieved_goal"], self._goal[:2], info)
         done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
@@ -93,6 +93,7 @@ class PepperPushEnv(PepperEnv):
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
         # Object position relative to camera
         obj_rel_pos = np.array(obj_pos) - np.array(cam_pos[0])
+        goal_rel_pos = np.array(self._goal) - np.array(cam_pos[0])
 
         v, _ = p.multiplyTransforms(cam_pos[0], cam_pos[1], (0, 0, 1),
                                     (0, 0, 0, 1))
@@ -104,11 +105,11 @@ class PepperPushEnv(PepperEnv):
         return {
             "observation":
             np.concatenate([joint_p, cam_pos[0], cam_pos[1],
-                            obj_rel_pos]).astype(np.float32),
+                            obj_rel_pos, goal_rel_pos]).astype(np.float32),
             "achieved_goal":
-            np.array(obj_pos, dtype=np.float32),
+            np.array(obj_pos[:2], dtype=np.float32),
             "desired_goal":
-            self._goal,
+            self._goal[:2],
         }
 
     def _place_ghosts(self):
