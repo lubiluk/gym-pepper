@@ -56,6 +56,12 @@ class PepperReachCamEnv(PepperReachEnv):
                     shape=obs["camera"].shape,
                     dtype=obs["camera"].dtype,
                 ),
+                camera_pose=spaces.Box(
+                    -np.inf,
+                    np.inf,
+                    shape=obs["camera_pose"].shape,
+                    dtype=obs["camera_pose"].dtype,
+                ),
                 joints_state=spaces.Box(
                     -np.inf,
                     np.inf,
@@ -74,8 +80,8 @@ class PepperReachCamEnv(PepperReachEnv):
 
         result = {
             "camera": img,
-            "joints_state": np.array(joint_p, dtype=np.float32),
-            "camera_pose": np.concatenate([cam_pos[0], cam_pos[1]]).astype(np.float32)
+            "camera_pose": np.concatenate([cam_pos[0], cam_pos[1]]).astype(np.float32),
+            "joints_state": np.array(joint_p, dtype=np.float32)
         }
 
         return result
