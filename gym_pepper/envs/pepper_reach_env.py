@@ -59,7 +59,7 @@ class PepperReachEnv(PepperEnv):
     def _is_success(self):
         cont = p.getContactPoints(self._robot.getRobotModel(), self._obj)
 
-        return len(cont) > 0
+        return len(cont) > 0 and all(36 <= c[3] <= 49 for c in cont)
 
     def _get_observation_space(self):
         obs = self._get_observation()
