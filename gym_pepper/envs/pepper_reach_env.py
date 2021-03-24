@@ -34,17 +34,18 @@ class PepperReachEnv(PepperEnv):
         is_success = self._is_success()
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
+        is_looking_at_table = obs[-3:].any()
 
         info = {
             "is_success": is_success,
             "is_safety_violated": is_safety_violated
         }
-        reward = self._compute_reward(is_success, is_safety_violated)
+        reward = self._compute_reward(is_success, is_safety_violated, is_looking_at_table)
         done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
 
-    def _compute_reward(self, is_success, is_safety_violated):
+    def _compute_reward(self, is_success, is_safety_violated, is_looking_at_table):
         if is_success:
             return 1.0
 
@@ -52,7 +53,10 @@ class PepperReachEnv(PepperEnv):
             return -1.0
 
         if self._dense:
-            return -0.01
+            if is_looking_at_table:
+                return -0.001
+            else:
+                return -0.01
 
         return 0.0
 
