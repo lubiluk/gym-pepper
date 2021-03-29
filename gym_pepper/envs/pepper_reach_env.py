@@ -41,8 +41,7 @@ class PepperReachEnv(PepperEnv):
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
 
-        img = self._robot.getCameraFrame(self._cam)
-        is_object_in_sight = detection.is_object_in_sight(img)
+        is_object_in_sight = not (obs[-1] == obs[-2] == obs[3] == 0.0)
 
         info = {
             "is_success": is_success,
@@ -101,11 +100,9 @@ class PepperReachEnv(PepperEnv):
                                        goal_pos[1])
         obj_rel_pos = np.array(rel_pos[0])
 
-        v, _ = p.multiplyTransforms(cam_pos[0], cam_pos[1], (0, 0, 1),
-                                    (0, 0, 0, 1))
-        hit_id = p.rayTest(cam_pos[0], v)[0][0]
+        img = self._robot.getCameraFrame(self._cam)
 
-        if (hit_id != self._table) and (hit_id != self._obj):
+        if not detection.is_object_in_sight(img):
             obj_rel_pos = np.array((0.0, 0.0, 0.0), dtype=np.float32)
 
         return np.concatenate([joint_p, cam_pos[0], cam_pos[1],
