@@ -1,9 +1,10 @@
-from .pepper_env import PepperEnv
-import pybullet as p
 import numpy as np
+import pybullet as p
 from gym import spaces
+from qibullet import Camera, PepperVirtual
+
 from . import detection
-from qibullet import PepperVirtual, Camera
+from .pepper_env import PepperEnv
 
 
 class PepperReachEnv(PepperEnv):

@@ -1,22 +1,38 @@
-# Some bits are based on:
-# https://github.com/softbankrobotics-research/qi_gym/blob/master/envs/throwing_env.py
-
-import os.path
-
-import gym
 import numpy as np
 import pybullet as p
 from gym import spaces
 from qibullet import Camera, PepperVirtual
 
 from . import detection
-from .pepper_reach_env import PepperReachEnv
+from .pepper_env import PepperEnv
 
 
-class PepperReachDepthEnv(PepperReachEnv):
+class PepperReachDepthEnv(PepperEnv):
+    def __init__(self,
+                 gui=False,
+                 sim_steps_per_action=10,
+                 dense=False,
+                 head_motion=True):
+        self._dense = dense
+        super(PepperReachDepthEnv,
+              self).__init__(gui=gui,
+                             sim_steps_per_action=sim_steps_per_action,
+                             head_motion=head_motion)
+
+    def reset(self):
+        obj_pos = self._reset_scene()
+        self._goal = obj_pos
+
+        return self._get_observation()
+
+    def close(self):
+        self._robot.unsubscribeCamera(self._depth)
+        super(PepperReachDepthEnv, self).close()
+
     def step(self, action):
         """
-        Action in terms of desired joint positions. Last number is the speed of the movement.
+        Action in terms of desired joint positions.
+        The last number is the speed of the movement.
         """
         self._perform_action(action)
 
@@ -26,25 +42,40 @@ class PepperReachDepthEnv(PepperReachEnv):
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
         obj_pos = self._get_object_pos()
-        is_object_in_sight = detection.is_object_in_sight(obs["camera"])
 
         info = {
             "is_success": is_success,
             "is_safety_violated": is_safety_violated,
             "object_position": obj_pos
         }
-        reward = self._compute_reward(is_success, is_safety_violated,
-                                      is_object_in_sight)
+        reward = self._compute_reward(is_success, is_safety_violated)
         done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
 
+    def _compute_reward(self, is_success, is_safety_violated):
+        if is_success:
+            return 1.0
+
+        if is_safety_violated:
+            return -1.0
+
+        if self._dense:
+            return -0.01
+
+        return 0.0
+
+    def _is_success(self):
+        cont = p.getContactPoints(self._robot.getRobotModel(), self._obj)
+
+        return len(cont) > 0 and all(36 <= c[3] <= 49 for c in cont)
+
     def _setup_scene(self):
-        super(PepperReachEnv, self)._setup_scene()
+        super(PepperReachDepthEnv, self)._setup_scene()
 
         # Setup camera
-        self._depth = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_DEPTH,
-                                                resolution=Camera.K_QQVGA)
+        self._depth = self._robot.subscribeCamera(
+            PepperVirtual.ID_CAMERA_DEPTH, resolution=Camera.K_QQVGA)
 
     def _get_observation_space(self):
         obs = self._get_observation()
@@ -72,12 +103,10 @@ class PepperReachDepthEnv(PepperReachEnv):
             ))
 
     def _get_observation(self):
-        img = self._robot.getCameraFrame(self._cam)
+        img = self._robot.getCameraFrame(self._depth)
 
         joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
-        # joint velocities are not available on real Pepper
-        # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
-        cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
+        cam_pos = self._robot.getLinkPosition("CameraDepth_optical_frame")
 
         result = {
             "camera":
@@ -93,7 +122,7 @@ class PepperReachDepthEnv(PepperReachEnv):
     def _get_object_pos(self):
         goal_pos = p.getBasePositionAndOrientation(
             self._obj, physicsClientId=self._client)
-        cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
+        cam_idx = self._robot.link_dict["CameraDepth_optical_frame"].getIndex(
         )
         cam_pos = p.getLinkState(self._robot.getRobotModel(),
                                  cam_idx,
