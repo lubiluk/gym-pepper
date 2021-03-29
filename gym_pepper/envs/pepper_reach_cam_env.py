@@ -22,7 +22,7 @@ class PepperReachCamEnv(PepperReachEnv):
         is_success = self._is_success()
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
-        obj_pos = self._get_object_pos()
+        obj_pos = self._get_object_pos(obs["camera"])
         is_object_in_sight = is_object_in_sight = not (obj_pos[-1] == obj_pos[-2] == obj_pos[-3] == 0.0)
 
         info = {
