@@ -41,7 +41,7 @@ class PepperReachEnv(PepperEnv):
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
 
-        is_object_in_sight = not (obs[-1] == obs[-2] == obs[3] == 0.0)
+        is_object_in_sight = not (obs[-1] == obs[-2] == obs[-3] == 0.0)
 
         info = {
             "is_success": is_success,

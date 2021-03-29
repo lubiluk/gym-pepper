@@ -23,7 +23,7 @@ class PepperReachCamEnv(PepperReachEnv):
         is_safety_violated = self._is_table_touched(
         ) or self._is_table_displaced()
         obj_pos = self._get_object_pos()
-        is_object_in_sight = detection.is_object_in_sight(obs["camera"])
+        is_object_in_sight = is_object_in_sight = not (obj_pos[-1] == obj_pos[-2] == obj_pos[-3] == 0.0)
 
         info = {
             "is_success": is_success,
@@ -80,17 +80,16 @@ class PepperReachCamEnv(PepperReachEnv):
 
         return result
 
-    def _get_object_pos(self):
+    def _get_object_pos(self, img):
         goal_pos = p.getBasePositionAndOrientation(
             self._obj, physicsClientId=self._client)
-        cam_idx = self._robot.link_dict["CameraBottom_optical_frame"].getIndex(
-        )
-        cam_pos = p.getLinkState(self._robot.getRobotModel(),
-                                 cam_idx,
-                                 physicsClientId=self._client)
+        cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
         # Object position relative to camera
         inv = p.invertTransform(cam_pos[0], cam_pos[1])
         rel_pos = p.multiplyTransforms(inv[0], inv[1], goal_pos[0],
                                        goal_pos[1])
+
+        if not detection.is_object_in_sight(img):
+            return np.array((0.0, 0.0, 0.0), dtype=np.float32)
 
         return np.array(rel_pos[0])
