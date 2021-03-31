@@ -28,7 +28,8 @@ class PepperReachCamEnv(PepperReachEnv):
         info = {
             "is_success": is_success,
             "is_safety_violated": is_safety_violated,
-            "object_position": obj_pos
+            "object_position": obj_pos,
+            "is_object_in_sight": is_object_in_sight
         }
         reward = self._compute_reward(is_success, is_safety_violated,
                                       is_object_in_sight)
