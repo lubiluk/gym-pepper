@@ -109,3 +109,5 @@ class PepperReachEnv(PepperEnv):
             joint_p, cam_pos[0], cam_pos[1], hand_pos[0], hand_pos[1],
             obj_rel_pos
         ]).astype(np.float32)
+
+        # return np.concatenate([joint_p, obj_rel_pos]).astype(np.float32)
