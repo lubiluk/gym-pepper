@@ -95,6 +95,7 @@ class PepperReachEnv(PepperEnv):
         # joint velocities are not available on real Pepper
         # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
+        hand_pos = self._robot.getLinkPosition("l_hand")
         # Object position relative to camera
         inv = p.invertTransform(cam_pos[0], cam_pos[1])
         rel_pos = p.multiplyTransforms(inv[0], inv[1], goal_pos[0],
@@ -106,5 +107,7 @@ class PepperReachEnv(PepperEnv):
         if not detection.is_object_in_sight(img):
             obj_rel_pos = np.array((0.0, 0.0, 0.0), dtype=np.float32)
 
-        return np.concatenate([joint_p, cam_pos[0], cam_pos[1],
-                               obj_rel_pos]).astype(np.float32)
+        return np.concatenate([
+            joint_p, cam_pos[0], cam_pos[1], hand_pos[0], hand_pos[1],
+            obj_rel_pos
+        ]).astype(np.float32)
