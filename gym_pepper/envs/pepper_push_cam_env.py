@@ -297,8 +297,7 @@ class PepperPushCamEnv(gym.GoalEnv):
 
         img_bottom = self._robot.getCameraFrame(self._cam_bottom)
 
-        joint_p = self._robot.getAnglesPosition(CONTROLLABLE_JOINTS)
-        # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        joint_p = self._get_joints_states()
 
         result = {
             "camera_bottom": img_bottom.transpose(2, 0, 1),

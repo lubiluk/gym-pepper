@@ -196,6 +196,13 @@ class PepperEnv(gym.Env):
                 physicsClientId=self._client,
             )
 
+    def _get_joints_states(self):
+        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
+        scaled = [
+            self._scale_feature(i, f) for (i, f) in enumerate(joint_p)
+        ]
+        return scaled
+
     def _get_observation_space(self):
         raise "Not implemented"
 
@@ -226,3 +233,7 @@ class PepperEnv(gym.Env):
     def _rescale_feature(self, index, value):
         r = self.FEATURE_LIMITS[index]
         return (r[1] - r[0]) * (value + 1) / 2 + r[0]
+
+    def _scale_feature(self, index, value):
+        r = self.FEATURE_LIMITS[index]
+        return (value - r[0]) * 2 / (r[1] - r[0]) - 1

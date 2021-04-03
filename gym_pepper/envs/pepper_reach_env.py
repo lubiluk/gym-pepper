@@ -91,9 +91,7 @@ class PepperReachEnv(PepperEnv):
     def _get_observation(self):
         goal_pos = p.getBasePositionAndOrientation(
             self._obj, physicsClientId=self._client)
-        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
-        # joint velocities are not available on real Pepper
-        # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        joint_p = self._get_joints_states()
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
         hand_pos = self._robot.getLinkPosition("l_hand")
         # Object position relative to camera

@@ -105,7 +105,7 @@ class PepperReachDepthEnv(PepperEnv):
     def _get_observation(self):
         img = self._robot.getCameraFrame(self._depth)
 
-        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
+        joint_p = self._get_joints_states()
         cam_pos = self._robot.getLinkPosition("CameraDepth_optical_frame")
 
         result = {
