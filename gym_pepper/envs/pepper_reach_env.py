@@ -26,7 +26,8 @@ class PepperReachEnv(PepperEnv):
         return self._get_observation()
 
     def close(self):
-        self._robot.unsubscribeCamera(self._cam)
+        if self._robot:
+            self._robot.unsubscribeCamera(self._cam)
         super(PepperReachEnv, self).close()
 
     def step(self, action):

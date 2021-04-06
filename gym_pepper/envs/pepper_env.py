@@ -70,7 +70,8 @@ class PepperEnv(gym.Env):
         pass
 
     def close(self):
-        self._simulation_manager.stopSimulation(self._client)
+        if self._simulation_manager:
+            self._simulation_manager.stopSimulation(self._client)
 
     def seed(self, seed=None):
         np.random.seed(seed or 0)
