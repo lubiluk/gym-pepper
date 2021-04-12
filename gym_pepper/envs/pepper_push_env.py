@@ -7,15 +7,18 @@ import pybullet as p
 import os.path
 from gym import spaces
 from .pepper_env import PepperEnv
+from . import detection
+from qibullet import Camera, PepperVirtual
 
 DISTANCE_THRESHOLD = 0.04
 
 
-class PepperPushEnv(PepperEnv):
-    def __init__(self, gui=False, sim_steps_per_action=10):
+class PepperPushEnv(PepperEnv, gym.GoalEnv):
+    def __init__(self, gui=False, sim_steps_per_action=10, head_motion=True):
         super(PepperPushEnv,
               self).__init__(gui=gui,
-                             sim_steps_per_action=sim_steps_per_action)
+                             sim_steps_per_action=sim_steps_per_action,
+                             head_motion=head_motion)
 
     def reset(self):
         self._reset_scene()
@@ -25,6 +28,11 @@ class PepperPushEnv(PepperEnv):
             self._place_ghosts()
 
         return self._get_observation()
+
+    def close(self):
+        if self._robot:
+            self._robot.unsubscribeCamera(self._cam)
+        super(PepperPushEnv, self).close()
 
     def step(self, action):
         self._perform_action(action)
@@ -39,7 +47,8 @@ class PepperPushEnv(PepperEnv):
             "is_success": is_success,
             "is_safety_violated": is_safety_violated
         }
-        reward = self.compute_reward(obs["achieved_goal"], self._goal[:2], info)
+        reward = self.compute_reward(obs["achieved_goal"], self._goal[:2],
+                                     info)
         done = is_success or is_safety_violated
 
         return (obs, reward, done, info)
@@ -54,6 +63,10 @@ class PepperPushEnv(PepperEnv):
 
     def _setup_scene(self):
         super(PepperPushEnv, self)._setup_scene()
+
+        # Setup camera
+        self._cam = self._robot.subscribeCamera(PepperVirtual.ID_CAMERA_BOTTOM,
+                                                resolution=Camera.K_QQVGA)
 
         if self._gui:
             # load ghosts
@@ -85,29 +98,30 @@ class PepperPushEnv(PepperEnv):
             ))
 
     def _get_observation(self):
-        obj_pos = p.getBasePositionAndOrientation(
-            self._obj, physicsClientId=self._client)[0]
-        joint_p = self._robot.getAnglesPosition(self.CONTROLLABLE_JOINTS)
-        # joint velocities are not available on real Pepper
-        # joint_v = self._robot.getAnglesVelocity(CONTROLLABLE_JOINTS)
+        obj_pos = p.getBasePositionAndOrientation(self._obj,
+                                                  physicsClientId=self._client)
+        joint_p = self._get_joints_states()
         cam_pos = self._robot.getLinkPosition("CameraBottom_optical_frame")
+        hand_pos = self._robot.getLinkPosition("l_hand")
         # Object position relative to camera
-        obj_rel_pos = np.array(obj_pos) - np.array(cam_pos[0])
-        goal_rel_pos = np.array(self._goal) - np.array(cam_pos[0])
+        inv = p.invertTransform(cam_pos[0], cam_pos[1])
+        obj_rel_pos = np.array(
+            p.multiplyTransforms(inv[0], inv[1], obj_pos[0], obj_pos[1])[0])
+        goal_rel_pos = np.array(
+            p.multiplyTransforms(inv[0], inv[1], self._goal, obj_pos[1])[0])
 
-        v, _ = p.multiplyTransforms(cam_pos[0], cam_pos[1], (0, 0, 1),
-                                    (0, 0, 0, 1))
-        hit_id = p.rayTest(cam_pos[0], v)[0][0]
+        img = self._robot.getCameraFrame(self._cam)
 
-        if (hit_id != self._table) and (hit_id != self._obj):
+        if not detection.is_object_in_sight(img):
             obj_rel_pos = np.array((0.0, 0.0, 0.0), dtype=np.float32)
 
         return {
             "observation":
-            np.concatenate([joint_p, cam_pos[0], cam_pos[1],
-                            obj_rel_pos, goal_rel_pos]).astype(np.float32),
+            np.concatenate(
+                [joint_p, cam_pos[0], cam_pos[1], obj_rel_pos,
+                 goal_rel_pos]).astype(np.float32),
             "achieved_goal":
-            np.array(obj_pos[:2], dtype=np.float32),
+            np.array(obj_pos[0][:2], dtype=np.float32),
             "desired_goal":
             self._goal[:2],
         }
